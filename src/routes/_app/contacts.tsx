@@ -587,6 +587,12 @@ function ContactDrawer({
               <TabsContent value="policies" className="pt-4">
                 <PoliciesTab contactId={contact.id} />
               </TabsContent>
+              <TabsContent value="tasks" className="pt-4">
+                <TasksWidget contactId={contact.id} />
+              </TabsContent>
+              <TabsContent value="activity" className="pt-4">
+                <ActivityTimeline contactId={contact.id} />
+              </TabsContent>
             </Tabs>
 
             <SheetFooter className="px-6 py-4 border-t">
