@@ -98,6 +98,19 @@ export const updateContact = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const patch = cleanInput(data.patch as ContactInput);
     delete patch.user_id;
+
+    // Read prior stage to log stage_change activity
+    let priorStage: string | null = null;
+    if (patch.pipeline_stage) {
+      const { data: prior } = await context.supabase
+        .from("contacts")
+        .select("pipeline_stage")
+        .eq("id", data.id)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      priorStage = (prior?.pipeline_stage as string | undefined) ?? null;
+    }
+
     const { data: row, error } = await (context.supabase.from("contacts") as any)
       .update(patch)
       .eq("id", data.id)
@@ -105,6 +118,15 @@ export const updateContact = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+
+    if (patch.pipeline_stage && priorStage && priorStage !== patch.pipeline_stage) {
+      await (context.supabase.from("activities") as any).insert({
+        user_id: context.userId,
+        contact_id: data.id,
+        activity_type: "stage_change",
+        description: `Stage changed from ${priorStage} to ${patch.pipeline_stage}`,
+      });
+    }
     return row as Contact;
   });
 
