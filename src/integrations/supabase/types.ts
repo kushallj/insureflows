@@ -49,6 +49,81 @@ export type Database = {
           },
         ]
       }
+      campaigns: {
+        Row: {
+          audience_count_snapshot: number | null
+          channel: Database["public"]["Enums"]["template_channel"]
+          clicked_count: number
+          created_at: string
+          created_by: string | null
+          delivered_count: number
+          failed_count: number
+          id: string
+          name: string
+          opened_count: number
+          scheduled_at: string | null
+          segment_id: string | null
+          sent_count: number
+          status: Database["public"]["Enums"]["campaign_status"]
+          template_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audience_count_snapshot?: number | null
+          channel: Database["public"]["Enums"]["template_channel"]
+          clicked_count?: number
+          created_at?: string
+          created_by?: string | null
+          delivered_count?: number
+          failed_count?: number
+          id?: string
+          name: string
+          opened_count?: number
+          scheduled_at?: string | null
+          segment_id?: string | null
+          sent_count?: number
+          status?: Database["public"]["Enums"]["campaign_status"]
+          template_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audience_count_snapshot?: number | null
+          channel?: Database["public"]["Enums"]["template_channel"]
+          clicked_count?: number
+          created_at?: string
+          created_by?: string | null
+          delivered_count?: number
+          failed_count?: number
+          id?: string
+          name?: string
+          opened_count?: number
+          scheduled_at?: string | null
+          segment_id?: string | null
+          sent_count?: number
+          status?: Database["public"]["Enums"]["campaign_status"]
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "segments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           age: number | null
@@ -304,6 +379,42 @@ export type Database = {
           },
         ]
       }
+      templates: {
+        Row: {
+          body: string
+          channel: Database["public"]["Enums"]["template_channel"]
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["template_status"]
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          channel: Database["public"]["Enums"]["template_channel"]
+          created_at?: string
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["template_status"]
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          channel?: Database["public"]["Enums"]["template_channel"]
+          created_at?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["template_status"]
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -318,6 +429,13 @@ export type Database = {
         | "task_completed"
         | "message_sent"
         | "other"
+      campaign_status:
+        | "draft"
+        | "scheduled"
+        | "sending"
+        | "paused"
+        | "completed"
+        | "cancelled"
       organization_kind: "family" | "business" | "other"
       pipeline_stage:
         | "new"
@@ -331,6 +449,8 @@ export type Database = {
       preferred_channel: "whatsapp" | "sms" | "email"
       task_priority: "low" | "normal" | "high"
       task_status: "open" | "done"
+      template_channel: "whatsapp" | "sms" | "email"
+      template_status: "draft" | "approved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -465,6 +585,14 @@ export const Constants = {
         "message_sent",
         "other",
       ],
+      campaign_status: [
+        "draft",
+        "scheduled",
+        "sending",
+        "paused",
+        "completed",
+        "cancelled",
+      ],
       organization_kind: ["family", "business", "other"],
       pipeline_stage: [
         "new",
@@ -479,6 +607,8 @@ export const Constants = {
       preferred_channel: ["whatsapp", "sms", "email"],
       task_priority: ["low", "normal", "high"],
       task_status: ["open", "done"],
+      template_channel: ["whatsapp", "sms", "email"],
+      template_status: ["draft", "approved"],
     },
   },
 } as const
