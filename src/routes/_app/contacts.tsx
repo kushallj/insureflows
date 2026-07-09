@@ -463,9 +463,10 @@ function ContactDrawer({
             </SheetHeader>
             <Tabs defaultValue="details" className="px-6 pt-2 pb-4">
               <TabsList>
-
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
               </TabsList>
               <TabsContent value="details" className="pt-4 space-y-6">
                 <Section title="Identity">
