@@ -61,6 +61,9 @@ function AppLayout() {
           <NavItem to="/renewals" icon={<CalendarClock className="h-4 w-4" />}>
             Renewals
           </NavItem>
+          <NavItem to="/segments" icon={<Layers className="h-4 w-4" />}>
+            Segments
+          </NavItem>
         </nav>
         <div className="p-3 border-t space-y-2">
           <div className="text-xs text-muted-foreground truncate px-1">{email}</div>
