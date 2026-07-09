@@ -19,6 +19,8 @@ import type {
 } from "@/lib/contact-fields";
 import { PIPELINE_STAGES, PREFERRED_CHANNELS, STAGE_LABEL } from "@/lib/contact-fields";
 import { StageBadge } from "@/components/stage-badge";
+import { LeadScoreBadge } from "@/components/lead-score";
+import { AiPanel } from "@/components/ai-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
