@@ -162,8 +162,7 @@ export const bulkCreateContacts = createServerFn({ method: "POST" })
     let inserted = 0;
     for (let i = 0; i < rows.length; i += 200) {
       const chunk = rows.slice(i, i + 200);
-      const { error, count } = await context.supabase
-        .from("contacts")
+      const { error, count } = await (context.supabase.from("contacts") as any)
         .insert(chunk, { count: "exact" });
       if (error) throw new Error(error.message);
       inserted += count ?? chunk.length;
