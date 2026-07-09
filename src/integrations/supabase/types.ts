@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          contact_id: string
+          created_at: string
+          description: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          activity_type?: Database["public"]["Enums"]["activity_type"]
+          contact_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["activity_type"]
+          contact_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           age: number | null
@@ -195,6 +230,50 @@ export type Database = {
           },
         ]
       }
+      tasks: {
+        Row: {
+          created_at: string
+          due_date: string | null
+          id: string
+          priority: Database["public"]["Enums"]["task_priority"]
+          related_contact_id: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          related_contact_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          related_contact_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_related_contact_id_fkey"
+            columns: ["related_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -203,6 +282,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      activity_type:
+        | "note"
+        | "stage_change"
+        | "task_completed"
+        | "message_sent"
+        | "other"
       organization_kind: "family" | "business" | "other"
       pipeline_stage:
         | "new"
@@ -214,6 +299,8 @@ export type Database = {
       policy_status: "active" | "lapsed" | "cancelled"
       policy_type: "life" | "health" | "motor" | "other"
       preferred_channel: "whatsapp" | "sms" | "email"
+      task_priority: "low" | "normal" | "high"
+      task_status: "open" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -341,6 +428,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_type: [
+        "note",
+        "stage_change",
+        "task_completed",
+        "message_sent",
+        "other",
+      ],
       organization_kind: ["family", "business", "other"],
       pipeline_stage: [
         "new",
@@ -353,6 +447,8 @@ export const Constants = {
       policy_status: ["active", "lapsed", "cancelled"],
       policy_type: ["life", "health", "motor", "other"],
       preferred_channel: ["whatsapp", "sms", "email"],
+      task_priority: ["low", "normal", "high"],
+      task_status: ["open", "done"],
     },
   },
 } as const
