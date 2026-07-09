@@ -17,6 +17,7 @@ import { Route as AppTasksRouteImport } from './routes/_app/tasks'
 import { Route as AppSegmentsRouteImport } from './routes/_app/segments'
 import { Route as AppRenewalsRouteImport } from './routes/_app/renewals'
 import { Route as AppContactsRouteImport } from './routes/_app/contacts'
+import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
 import { Route as AppSegmentsNewRouteImport } from './routes/_app/segments_.new'
 import { Route as AppSegmentsIdRouteImport } from './routes/_app/segments_.$id'
 import { Route as AppContactsImportRouteImport } from './routes/_app/contacts_.import'
@@ -60,6 +61,11 @@ const AppContactsRoute = AppContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCampaignsRoute = AppCampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSegmentsNewRoute = AppSegmentsNewRouteImport.update({
   id: '/segments_/new',
   path: '/segments/new',
@@ -79,6 +85,7 @@ const AppContactsImportRoute = AppContactsImportRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/campaigns': typeof AppCampaignsRoute
   '/contacts': typeof AppContactsRoute
   '/renewals': typeof AppRenewalsRoute
   '/segments': typeof AppSegmentsRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/campaigns': typeof AppCampaignsRoute
   '/contacts': typeof AppContactsRoute
   '/renewals': typeof AppRenewalsRoute
   '/segments': typeof AppSegmentsRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/campaigns': typeof AppCampaignsRoute
   '/_app/contacts': typeof AppContactsRoute
   '/_app/renewals': typeof AppRenewalsRoute
   '/_app/segments': typeof AppSegmentsRoute
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/campaigns'
     | '/contacts'
     | '/renewals'
     | '/segments'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/campaigns'
     | '/contacts'
     | '/renewals'
     | '/segments'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/_app/campaigns'
     | '/_app/contacts'
     | '/_app/renewals'
     | '/_app/segments'
@@ -218,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContactsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/campaigns': {
+      id: '/_app/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof AppCampaignsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/segments_/new': {
       id: '/_app/segments_/new'
       path: '/segments/new'
@@ -243,6 +262,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppCampaignsRoute: typeof AppCampaignsRoute
   AppContactsRoute: typeof AppContactsRoute
   AppRenewalsRoute: typeof AppRenewalsRoute
   AppSegmentsRoute: typeof AppSegmentsRoute
@@ -254,6 +274,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCampaignsRoute: AppCampaignsRoute,
   AppContactsRoute: AppContactsRoute,
   AppRenewalsRoute: AppRenewalsRoute,
   AppSegmentsRoute: AppSegmentsRoute,
