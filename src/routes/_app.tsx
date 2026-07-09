@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Users, LogOut, CalendarClock, ListTodo, Layers } from "lucide-react";
+import { Shield, Users, LogOut, CalendarClock, ListTodo, Layers, FileText, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
