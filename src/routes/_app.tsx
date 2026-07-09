@@ -55,6 +55,9 @@ function AppLayout() {
           <NavItem to="/contacts" icon={<Users className="h-4 w-4" />}>
             Contacts
           </NavItem>
+          <NavItem to="/tasks" icon={<ListTodo className="h-4 w-4" />}>
+            My Tasks
+          </NavItem>
           <NavItem to="/renewals" icon={<CalendarClock className="h-4 w-4" />}>
             Renewals
           </NavItem>
