@@ -461,9 +461,9 @@ function ContactDrawer({
                 </span>
               </SheetDescription>
             </SheetHeader>
-            <div className="px-6 py-4 space-y-6">
-            <Tabs defaultValue="details" className="px-6 pt-2">
+            <Tabs defaultValue="details" className="px-6 pt-2 pb-4">
               <TabsList>
+
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
               </TabsList>
