@@ -55,6 +55,9 @@ function AppLayout() {
           <NavItem to="/contacts" icon={<Users className="h-4 w-4" />}>
             Contacts
           </NavItem>
+          <NavItem to="/renewals" icon={<CalendarClock className="h-4 w-4" />}>
+            Renewals
+          </NavItem>
         </nav>
         <div className="p-3 border-t space-y-2">
           <div className="text-xs text-muted-foreground truncate px-1">{email}</div>
