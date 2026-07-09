@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Users, LogOut } from "lucide-react";
+import { Shield, Users, LogOut, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,6 +54,9 @@ function AppLayout() {
         <nav className="flex-1 p-2 space-y-0.5">
           <NavItem to="/contacts" icon={<Users className="h-4 w-4" />}>
             Contacts
+          </NavItem>
+          <NavItem to="/renewals" icon={<CalendarClock className="h-4 w-4" />}>
+            Renewals
           </NavItem>
         </nav>
         <div className="p-3 border-t space-y-2">

@@ -32,6 +32,7 @@ export type Database = {
           next_followup_at: string | null
           notes: string | null
           occupation: string | null
+          organization_id: string | null
           phone: string | null
           pipeline_stage: Database["public"]["Enums"]["pipeline_stage"]
           preferred_channel: Database["public"]["Enums"]["preferred_channel"]
@@ -59,6 +60,7 @@ export type Database = {
           next_followup_at?: string | null
           notes?: string | null
           occupation?: string | null
+          organization_id?: string | null
           phone?: string | null
           pipeline_stage?: Database["public"]["Enums"]["pipeline_stage"]
           preferred_channel?: Database["public"]["Enums"]["preferred_channel"]
@@ -86,6 +88,7 @@ export type Database = {
           next_followup_at?: string | null
           notes?: string | null
           occupation?: string | null
+          organization_id?: string | null
           phone?: string | null
           pipeline_stage?: Database["public"]["Enums"]["pipeline_stage"]
           preferred_channel?: Database["public"]["Enums"]["preferred_channel"]
@@ -96,7 +99,101 @@ export type Database = {
           user_id?: string
           whatsapp_opt_in?: boolean
         }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["organization_kind"]
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["organization_kind"]
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["organization_kind"]
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
         Relationships: []
+      }
+      policies: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          insurer_name: string | null
+          notes: string | null
+          policy_number: string
+          policy_type: Database["public"]["Enums"]["policy_type"]
+          premium_amount: number | null
+          renewal_date: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["policy_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          insurer_name?: string | null
+          notes?: string | null
+          policy_number: string
+          policy_type?: Database["public"]["Enums"]["policy_type"]
+          premium_amount?: number | null
+          renewal_date?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["policy_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          insurer_name?: string | null
+          notes?: string | null
+          policy_number?: string
+          policy_type?: Database["public"]["Enums"]["policy_type"]
+          premium_amount?: number | null
+          renewal_date?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["policy_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policies_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -106,6 +203,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      organization_kind: "family" | "business" | "other"
       pipeline_stage:
         | "new"
         | "contacted"
@@ -113,6 +211,8 @@ export type Database = {
         | "proposal"
         | "won"
         | "lost"
+      policy_status: "active" | "lapsed" | "cancelled"
+      policy_type: "life" | "health" | "motor" | "other"
       preferred_channel: "whatsapp" | "sms" | "email"
     }
     CompositeTypes: {
@@ -241,6 +341,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      organization_kind: ["family", "business", "other"],
       pipeline_stage: [
         "new",
         "contacted",
@@ -249,6 +350,8 @@ export const Constants = {
         "won",
         "lost",
       ],
+      policy_status: ["active", "lapsed", "cancelled"],
+      policy_type: ["life", "health", "motor", "other"],
       preferred_channel: ["whatsapp", "sms", "email"],
     },
   },

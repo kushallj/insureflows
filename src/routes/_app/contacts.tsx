@@ -40,6 +40,8 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PoliciesTab } from "@/components/policies-tab";
 import {
   Dialog,
   DialogContent,
@@ -459,8 +461,14 @@ function ContactDrawer({
                 </span>
               </SheetDescription>
             </SheetHeader>
-            <div className="px-6 py-4 space-y-6">
-              <Section title="Identity">
+            <Tabs defaultValue="details" className="px-6 pt-2 pb-4">
+              <TabsList>
+
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="policies">Policies</TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="pt-4 space-y-6">
+                <Section title="Identity">
                 <InlineText label="Name" value={contact.name} onSave={(v) => save({ name: v ?? "" })} />
                 <InlineText
                   label="Gender"
@@ -572,7 +580,12 @@ function ContactDrawer({
               <Section title="Notes">
                 <NotesField value={contact.notes} onSave={(v) => save({ notes: v })} />
               </Section>
-            </div>
+              </TabsContent>
+              <TabsContent value="policies" className="pt-4">
+                <PoliciesTab contactId={contact.id} />
+              </TabsContent>
+            </Tabs>
+
             <SheetFooter className="px-6 py-4 border-t">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
