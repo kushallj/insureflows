@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, ArrowUpDown } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
