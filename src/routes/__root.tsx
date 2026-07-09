@@ -88,10 +88,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "InsureFlow — Insurance CRM for advisors" },
       {
         property: "og:description",
-        content: "Manage leads, follow-ups and clients as an independent insurance advisor.",
+        content: "InsureFlow is a lightweight insurance CRM to manage leads, follow-ups and clients — built for independent advisors.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "InsureFlow — Insurance CRM for advisors" },
+      { name: "twitter:description", content: "InsureFlow is a lightweight insurance CRM to manage leads, follow-ups and clients — built for independent advisors." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/da1a90e2-7738-4018-8fee-0be541bb8a83/id-preview-e5008af0--3771dd08-7928-47b4-93de-eee0ccefa18b.lovable.app-1783600248190.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/da1a90e2-7738-4018-8fee-0be541bb8a83/id-preview-e5008af0--3771dd08-7928-47b4-93de-eee0ccefa18b.lovable.app-1783600248190.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
