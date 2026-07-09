@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PoliciesTab } from "@/components/policies-tab";
+import { TasksWidget } from "@/components/tasks-widget";
+import { ActivityTimeline } from "@/components/activity-timeline";
 import {
   Dialog,
   DialogContent,
@@ -463,9 +465,10 @@ function ContactDrawer({
             </SheetHeader>
             <Tabs defaultValue="details" className="px-6 pt-2 pb-4">
               <TabsList>
-
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="policies">Policies</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
               </TabsList>
               <TabsContent value="details" className="pt-4 space-y-6">
                 <Section title="Identity">
@@ -583,6 +586,12 @@ function ContactDrawer({
               </TabsContent>
               <TabsContent value="policies" className="pt-4">
                 <PoliciesTab contactId={contact.id} />
+              </TabsContent>
+              <TabsContent value="tasks" className="pt-4">
+                <TasksWidget contactId={contact.id} />
+              </TabsContent>
+              <TabsContent value="activity" className="pt-4">
+                <ActivityTimeline contactId={contact.id} />
               </TabsContent>
             </Tabs>
 
