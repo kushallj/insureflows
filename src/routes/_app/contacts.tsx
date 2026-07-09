@@ -461,7 +461,7 @@ function ContactDrawer({
             </SheetHeader>
             <div className="px-6 py-4 space-y-6">
               <Section title="Identity">
-                <InlineText label="Name" value={contact.name} onSave={(v) => save({ name: v })} />
+                <InlineText label="Name" value={contact.name} onSave={(v) => save({ name: v ?? "" })} />
                 <InlineText
                   label="Gender"
                   value={contact.gender}
