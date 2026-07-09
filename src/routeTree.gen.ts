@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppTasksRouteImport } from './routes/_app/tasks'
+import { Route as AppSegmentsRouteImport } from './routes/_app/segments'
 import { Route as AppRenewalsRouteImport } from './routes/_app/renewals'
 import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppContactsImportRouteImport } from './routes/_app/contacts_.import'
@@ -36,6 +37,11 @@ const AppTasksRoute = AppTasksRouteImport.update({
   path: '/tasks',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSegmentsRoute = AppSegmentsRouteImport.update({
+  id: '/segments',
+  path: '/segments',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppRenewalsRoute = AppRenewalsRouteImport.update({
   id: '/renewals',
   path: '/renewals',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/contacts': typeof AppContactsRoute
   '/renewals': typeof AppRenewalsRoute
+  '/segments': typeof AppSegmentsRoute
   '/tasks': typeof AppTasksRoute
   '/contacts/import': typeof AppContactsImportRoute
 }
@@ -65,6 +72,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/contacts': typeof AppContactsRoute
   '/renewals': typeof AppRenewalsRoute
+  '/segments': typeof AppSegmentsRoute
   '/tasks': typeof AppTasksRoute
   '/contacts/import': typeof AppContactsImportRoute
 }
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_app/contacts': typeof AppContactsRoute
   '/_app/renewals': typeof AppRenewalsRoute
+  '/_app/segments': typeof AppSegmentsRoute
   '/_app/tasks': typeof AppTasksRoute
   '/_app/contacts_/import': typeof AppContactsImportRoute
 }
@@ -85,10 +94,18 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contacts'
     | '/renewals'
+    | '/segments'
     | '/tasks'
     | '/contacts/import'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/contacts' | '/renewals' | '/tasks' | '/contacts/import'
+  to:
+    | '/'
+    | '/auth'
+    | '/contacts'
+    | '/renewals'
+    | '/segments'
+    | '/tasks'
+    | '/contacts/import'
   id:
     | '__root__'
     | '/'
@@ -96,6 +113,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_app/contacts'
     | '/_app/renewals'
+    | '/_app/segments'
     | '/_app/tasks'
     | '/_app/contacts_/import'
   fileRoutesById: FileRoutesById
@@ -136,6 +154,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTasksRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/segments': {
+      id: '/_app/segments'
+      path: '/segments'
+      fullPath: '/segments'
+      preLoaderRoute: typeof AppSegmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/renewals': {
       id: '/_app/renewals'
       path: '/renewals'
@@ -163,6 +188,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppContactsRoute: typeof AppContactsRoute
   AppRenewalsRoute: typeof AppRenewalsRoute
+  AppSegmentsRoute: typeof AppSegmentsRoute
   AppTasksRoute: typeof AppTasksRoute
   AppContactsImportRoute: typeof AppContactsImportRoute
 }
@@ -170,6 +196,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppContactsRoute: AppContactsRoute,
   AppRenewalsRoute: AppRenewalsRoute,
+  AppSegmentsRoute: AppSegmentsRoute,
   AppTasksRoute: AppTasksRoute,
   AppContactsImportRoute: AppContactsImportRoute,
 }
