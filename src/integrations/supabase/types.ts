@@ -14,7 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contacts: {
+        Row: {
+          age: number | null
+          city: string | null
+          created_at: string
+          date_of_birth: string | null
+          email: string | null
+          email_opt_in: boolean
+          gender: string | null
+          id: string
+          income: number | null
+          last_contact_at: string | null
+          lead_score: number
+          lead_source: string | null
+          name: string
+          next_followup_at: string | null
+          notes: string | null
+          occupation: string | null
+          phone: string | null
+          pipeline_stage: Database["public"]["Enums"]["pipeline_stage"]
+          preferred_channel: Database["public"]["Enums"]["preferred_channel"]
+          preferred_language: string | null
+          sms_opt_in: boolean
+          tags: string[]
+          updated_at: string
+          user_id: string
+          whatsapp_opt_in: boolean
+        }
+        Insert: {
+          age?: number | null
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          email_opt_in?: boolean
+          gender?: string | null
+          id?: string
+          income?: number | null
+          last_contact_at?: string | null
+          lead_score?: number
+          lead_source?: string | null
+          name: string
+          next_followup_at?: string | null
+          notes?: string | null
+          occupation?: string | null
+          phone?: string | null
+          pipeline_stage?: Database["public"]["Enums"]["pipeline_stage"]
+          preferred_channel?: Database["public"]["Enums"]["preferred_channel"]
+          preferred_language?: string | null
+          sms_opt_in?: boolean
+          tags?: string[]
+          updated_at?: string
+          user_id: string
+          whatsapp_opt_in?: boolean
+        }
+        Update: {
+          age?: number | null
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          email_opt_in?: boolean
+          gender?: string | null
+          id?: string
+          income?: number | null
+          last_contact_at?: string | null
+          lead_score?: number
+          lead_source?: string | null
+          name?: string
+          next_followup_at?: string | null
+          notes?: string | null
+          occupation?: string | null
+          phone?: string | null
+          pipeline_stage?: Database["public"]["Enums"]["pipeline_stage"]
+          preferred_channel?: Database["public"]["Enums"]["preferred_channel"]
+          preferred_language?: string | null
+          sms_opt_in?: boolean
+          tags?: string[]
+          updated_at?: string
+          user_id?: string
+          whatsapp_opt_in?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +106,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      pipeline_stage:
+        | "new"
+        | "contacted"
+        | "qualified"
+        | "proposal"
+        | "won"
+        | "lost"
+      preferred_channel: "whatsapp" | "sms" | "email"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +240,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      pipeline_stage: [
+        "new",
+        "contacted",
+        "qualified",
+        "proposal",
+        "won",
+        "lost",
+      ],
+      preferred_channel: ["whatsapp", "sms", "email"],
+    },
   },
 } as const
