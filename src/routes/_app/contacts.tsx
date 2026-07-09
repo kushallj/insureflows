@@ -19,6 +19,8 @@ import type {
 } from "@/lib/contact-fields";
 import { PIPELINE_STAGES, PREFERRED_CHANNELS, STAGE_LABEL } from "@/lib/contact-fields";
 import { StageBadge } from "@/components/stage-badge";
+import { LeadScoreBadge } from "@/components/lead-score";
+import { AiPanel } from "@/components/ai-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -190,7 +192,7 @@ function ContactsPage() {
                   <TableCell>
                     <StageBadge stage={c.pipeline_stage} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{c.lead_score}</TableCell>
+                  <TableCell className="text-right"><LeadScoreBadge score={c.lead_score} /></TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {formatDate(c.next_followup_at)}
                   </TableCell>
@@ -458,9 +460,7 @@ function ContactDrawer({
               <SheetTitle className="text-lg">{contact.name}</SheetTitle>
               <SheetDescription className="flex items-center gap-2">
                 <StageBadge stage={contact.pipeline_stage} />
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  Score {contact.lead_score}
-                </span>
+                <LeadScoreBadge score={contact.lead_score} />
               </SheetDescription>
             </SheetHeader>
             <Tabs defaultValue="details" className="px-6 pt-2 pb-4">
@@ -471,6 +471,11 @@ function ContactDrawer({
                 <TabsTrigger value="activity">Activity</TabsTrigger>
               </TabsList>
               <TabsContent value="details" className="pt-4 space-y-6">
+                <AiPanel
+                  contactId={contact.id}
+                  leadScore={contact.lead_score}
+                  aiSummary={contact.ai_summary}
+                />
                 <Section title="Identity">
                 <InlineText label="Name" value={contact.name} onSave={(v) => save({ name: v ?? "" })} />
                 <InlineText
