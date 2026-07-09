@@ -40,6 +40,8 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PoliciesTab } from "@/components/policies-tab";
 import {
   Dialog,
   DialogContent,
