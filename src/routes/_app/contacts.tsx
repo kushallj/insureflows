@@ -190,7 +190,7 @@ function ContactsPage() {
                   <TableCell>
                     <StageBadge stage={c.pipeline_stage} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{c.lead_score}</TableCell>
+                  <TableCell className="text-right"><LeadScoreBadge score={c.lead_score} /></TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {formatDate(c.next_followup_at)}
                   </TableCell>
