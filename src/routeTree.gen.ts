@@ -21,6 +21,7 @@ import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
 import { Route as AppSegmentsNewRouteImport } from './routes/_app/segments_.new'
 import { Route as AppSegmentsIdRouteImport } from './routes/_app/segments_.$id'
 import { Route as AppContactsImportRouteImport } from './routes/_app/contacts_.import'
+import { Route as AppCampaignsNewRouteImport } from './routes/_app/campaigns_.new'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -81,6 +82,11 @@ const AppContactsImportRoute = AppContactsImportRouteImport.update({
   path: '/contacts/import',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCampaignsNewRoute = AppCampaignsNewRouteImport.update({
+  id: '/campaigns_/new',
+  path: '/campaigns/new',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/segments': typeof AppSegmentsRoute
   '/tasks': typeof AppTasksRoute
   '/templates': typeof AppTemplatesRoute
+  '/campaigns/new': typeof AppCampaignsNewRoute
   '/contacts/import': typeof AppContactsImportRoute
   '/segments/$id': typeof AppSegmentsIdRoute
   '/segments/new': typeof AppSegmentsNewRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/segments': typeof AppSegmentsRoute
   '/tasks': typeof AppTasksRoute
   '/templates': typeof AppTemplatesRoute
+  '/campaigns/new': typeof AppCampaignsNewRoute
   '/contacts/import': typeof AppContactsImportRoute
   '/segments/$id': typeof AppSegmentsIdRoute
   '/segments/new': typeof AppSegmentsNewRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/_app/segments': typeof AppSegmentsRoute
   '/_app/tasks': typeof AppTasksRoute
   '/_app/templates': typeof AppTemplatesRoute
+  '/_app/campaigns_/new': typeof AppCampaignsNewRoute
   '/_app/contacts_/import': typeof AppContactsImportRoute
   '/_app/segments_/$id': typeof AppSegmentsIdRoute
   '/_app/segments_/new': typeof AppSegmentsNewRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/segments'
     | '/tasks'
     | '/templates'
+    | '/campaigns/new'
     | '/contacts/import'
     | '/segments/$id'
     | '/segments/new'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/segments'
     | '/tasks'
     | '/templates'
+    | '/campaigns/new'
     | '/contacts/import'
     | '/segments/$id'
     | '/segments/new'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/_app/segments'
     | '/_app/tasks'
     | '/_app/templates'
+    | '/_app/campaigns_/new'
     | '/_app/contacts_/import'
     | '/_app/segments_/$id'
     | '/_app/segments_/new'
@@ -258,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContactsImportRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/campaigns_/new': {
+      id: '/_app/campaigns_/new'
+      path: '/campaigns/new'
+      fullPath: '/campaigns/new'
+      preLoaderRoute: typeof AppCampaignsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -268,6 +287,7 @@ interface AppRouteChildren {
   AppSegmentsRoute: typeof AppSegmentsRoute
   AppTasksRoute: typeof AppTasksRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
+  AppCampaignsNewRoute: typeof AppCampaignsNewRoute
   AppContactsImportRoute: typeof AppContactsImportRoute
   AppSegmentsIdRoute: typeof AppSegmentsIdRoute
   AppSegmentsNewRoute: typeof AppSegmentsNewRoute
@@ -280,6 +300,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSegmentsRoute: AppSegmentsRoute,
   AppTasksRoute: AppTasksRoute,
   AppTemplatesRoute: AppTemplatesRoute,
+  AppCampaignsNewRoute: AppCampaignsNewRoute,
   AppContactsImportRoute: AppContactsImportRoute,
   AppSegmentsIdRoute: AppSegmentsIdRoute,
   AppSegmentsNewRoute: AppSegmentsNewRoute,
