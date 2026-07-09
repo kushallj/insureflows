@@ -51,6 +51,7 @@ export type Contact = {
   last_contact_at: string | null;
   next_followup_at: string | null;
   notes: string | null;
+  ai_summary: string | null;
   created_at: string;
   updated_at: string;
 };
