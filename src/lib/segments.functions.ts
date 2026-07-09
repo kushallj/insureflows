@@ -172,8 +172,13 @@ export const updateSegment = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data, context }) => {
+    const src = (data.patch ?? {}) as Record<string, unknown>;
+    const patch: Record<string, unknown> = {};
+    if (typeof src.name === "string") patch.name = src.name;
+    if (src.description === null || typeof src.description === "string") patch.description = src.description;
+    if (src.filter_criteria && typeof src.filter_criteria === "object") patch.filter_criteria = src.filter_criteria;
     const { data: row, error } = await (context.supabase.from("segments") as any)
-      .update(data.patch)
+      .update(patch)
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .select("*")
