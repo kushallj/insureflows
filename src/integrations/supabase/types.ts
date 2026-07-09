@@ -127,6 +127,7 @@ export type Database = {
       contacts: {
         Row: {
           age: number | null
+          ai_summary: string | null
           city: string | null
           created_at: string
           date_of_birth: string | null
@@ -155,6 +156,7 @@ export type Database = {
         }
         Insert: {
           age?: number | null
+          ai_summary?: string | null
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -183,6 +185,7 @@ export type Database = {
         }
         Update: {
           age?: number | null
+          ai_summary?: string | null
           city?: string | null
           created_at?: string
           date_of_birth?: string | null
