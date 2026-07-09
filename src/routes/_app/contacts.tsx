@@ -356,7 +356,7 @@ function SortMenu({
   };
   return (
     <Select value={value} onValueChange={(v) => onChange(v as SortKey)}>
-      <SelectTrigger size="sm" className="h-9 w-[180px]">
+      <SelectTrigger className="h-9 w-[180px]">
         <ArrowUpDown className="h-4 w-4 mr-1.5" />
         <SelectValue />
       </SelectTrigger>
