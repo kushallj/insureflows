@@ -83,7 +83,10 @@ export const updateTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string; patch: Partial<TemplateInput> }) => data)
   .handler(async ({ data, context }) => {
-    const patch: any = { ...data.patch };
+    const src = (data.patch ?? {}) as Record<string, unknown>;
+    const allowed = ["name","channel","subject","body","status"] as const;
+    const patch: Record<string, unknown> = {};
+    for (const k of allowed) if (k in src) patch[k] = src[k];
     if (patch.channel && patch.channel !== "email") patch.subject = null;
     const { data: row, error } = await (context.supabase.from("templates") as any)
       .update(patch)

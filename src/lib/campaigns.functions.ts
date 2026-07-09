@@ -99,8 +99,12 @@ export const updateCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string; patch: Partial<CampaignInput> }) => data)
   .handler(async ({ data, context }) => {
+    const src = (data.patch ?? {}) as Record<string, unknown>;
+    const allowed = ["name","channel","template_id","segment_id","status","scheduled_at","audience_count_snapshot"] as const;
+    const patch: Record<string, unknown> = {};
+    for (const k of allowed) if (k in src) patch[k] = src[k];
     const { data: row, error } = await (context.supabase.from("campaigns") as any)
-      .update(data.patch)
+      .update(patch)
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .select("*")
