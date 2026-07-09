@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PoliciesTab } from "@/components/policies-tab";
+import { TasksWidget } from "@/components/tasks-widget";
+import { ActivityTimeline } from "@/components/activity-timeline";
 import {
   Dialog,
   DialogContent,
