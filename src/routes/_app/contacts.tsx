@@ -460,9 +460,7 @@ function ContactDrawer({
               <SheetTitle className="text-lg">{contact.name}</SheetTitle>
               <SheetDescription className="flex items-center gap-2">
                 <StageBadge stage={contact.pipeline_stage} />
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  Score {contact.lead_score}
-                </span>
+                <LeadScoreBadge score={contact.lead_score} />
               </SheetDescription>
             </SheetHeader>
             <Tabs defaultValue="details" className="px-6 pt-2 pb-4">
