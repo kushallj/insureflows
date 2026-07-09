@@ -471,6 +471,11 @@ function ContactDrawer({
                 <TabsTrigger value="activity">Activity</TabsTrigger>
               </TabsList>
               <TabsContent value="details" className="pt-4 space-y-6">
+                <AiPanel
+                  contactId={contact.id}
+                  leadScore={contact.lead_score}
+                  aiSummary={contact.ai_summary}
+                />
                 <Section title="Identity">
                 <InlineText label="Name" value={contact.name} onSave={(v) => save({ name: v ?? "" })} />
                 <InlineText
