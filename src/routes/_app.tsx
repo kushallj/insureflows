@@ -64,6 +64,12 @@ function AppLayout() {
           <NavItem to="/segments" icon={<Layers className="h-4 w-4" />}>
             Segments
           </NavItem>
+          <NavItem to="/templates" icon={<FileText className="h-4 w-4" />}>
+            Templates
+          </NavItem>
+          <NavItem to="/campaigns" icon={<Megaphone className="h-4 w-4" />}>
+            Campaigns
+          </NavItem>
         </nav>
         <div className="p-3 border-t space-y-2">
           <div className="text-xs text-muted-foreground truncate px-1">{email}</div>
