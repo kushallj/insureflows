@@ -70,6 +70,9 @@ function AppLayout() {
           <NavItem to="/campaigns" icon={<Megaphone className="h-4 w-4" />}>
             Campaigns
           </NavItem>
+          <NavItem to="/analytics" icon={<BarChart3 className="h-4 w-4" />}>
+            Analytics
+          </NavItem>
         </nav>
         <div className="p-3 border-t space-y-2">
           <div className="text-xs text-muted-foreground truncate px-1">{email}</div>
