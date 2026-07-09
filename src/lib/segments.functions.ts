@@ -32,12 +32,8 @@ export type Segment = {
   updated_at: string;
 };
 
-type SupabaseClient = Parameters<
-  Parameters<ReturnType<typeof createServerFn>["handler"]>[0]
->[0]["context"]["supabase"];
-
 async function idsFromPolicies(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   f: SegmentFilters,
 ): Promise<string[] | null> {
