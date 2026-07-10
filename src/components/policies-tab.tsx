@@ -438,3 +438,30 @@ function Field({
     </div>
   );
 }
+
+function DocumentLink({ path }: { path: string }) {
+  const getUrl = useServerFn(getPolicyDocumentUrl);
+  const [loading, setLoading] = useState(false);
+  const filename = path.split("/").pop() ?? "document";
+  async function open() {
+    setLoading(true);
+    try {
+      const { url } = await getUrl({ data: { path } });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open");
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={open}
+      className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+    >
+      {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+      <span className="truncate max-w-[200px]">{filename}</span>
+    </button>
+  );
+}
