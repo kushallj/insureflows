@@ -19,6 +19,7 @@ export type Policy = {
   renewal_date: string | null;
   status: PolicyStatus;
   notes: string | null;
+  document_path: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -33,6 +34,7 @@ export type PolicyInput = {
   renewal_date?: string | null;
   status?: PolicyStatus;
   notes?: string | null;
+  document_path?: string | null;
 };
 
 function clean(input: Record<string, unknown>) {
