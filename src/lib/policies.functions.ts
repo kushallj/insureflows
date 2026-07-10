@@ -147,3 +147,18 @@ export const markContacted = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const getPolicyDocumentUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { path: string }) => data)
+  .handler(async ({ data, context }) => {
+    if (!data.path.startsWith(`${context.userId}/`)) {
+      throw new Error("Not allowed");
+    }
+    const { data: signed, error } = await context.supabase.storage
+      .from("policy-documents")
+      .createSignedUrl(data.path, 60 * 10);
+    if (error) throw new Error(error.message);
+    return { url: signed.signedUrl };
+  });
+
