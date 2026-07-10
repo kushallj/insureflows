@@ -38,7 +38,7 @@ function NewSegmentPage() {
   });
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-full">
       <header className="h-14 border-b px-6 flex items-center gap-3">
         <Link to="/segments">
           <Button size="icon" variant="ghost" className="h-8 w-8">

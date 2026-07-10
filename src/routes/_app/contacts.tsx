@@ -126,8 +126,8 @@ function ContactsPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="h-14 border-b px-6 flex items-center justify-between bg-background">
+    <div className="flex flex-col h-full">
+      <header className="h-14 border-b pl-14 pr-4 md:px-6 flex items-center justify-between bg-background">
         <div>
           <h1 className="text-base font-semibold tracking-tight">Contacts</h1>
           <p className="text-xs text-muted-foreground">

@@ -124,8 +124,8 @@ function CampaignDetailPage() {
     : "";
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="h-14 border-b px-6 flex items-center justify-between">
+    <div className="flex flex-col h-full">
+      <header className="h-14 border-b pl-14 pr-4 md:px-6 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <Link to="/campaigns" className="text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-4 w-4" />

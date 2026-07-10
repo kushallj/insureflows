@@ -224,8 +224,8 @@ function ImportPage() {
   }, [processed]);
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="h-14 border-b px-6 flex items-center justify-between">
+    <div className="flex flex-col h-full">
+      <header className="h-14 border-b pl-14 pr-4 md:px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link to="/contacts">
             <Button variant="ghost" size="icon">
