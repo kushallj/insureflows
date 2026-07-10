@@ -19,6 +19,7 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showForgot, setShowForgot] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -48,6 +49,19 @@ function AuthPage() {
     toast.success("Account created. You can sign in now.");
   }
 
+  async function forgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) return toast.error("Enter your email first.");
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("If an account exists, a reset link has been sent.");
+    setShowForgot(false);
+  }
+
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary/95 to-primary p-10 text-primary-foreground">
@@ -70,40 +84,74 @@ function AuthPage() {
           <div className="lg:hidden mb-8 flex items-center gap-2 font-semibold">
             <Shield className="h-5 w-5 text-primary" /> InsureFlow
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Sign in to your advisor account, or create one.
-          </p>
-          <Tabs defaultValue="signin" className="mt-6">
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="signin">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Sign up</TabsTrigger>
-            </TabsList>
-            <TabsContent value="signin">
-              <form onSubmit={signIn} className="space-y-4 pt-4">
+
+          {showForgot ? (
+            <>
+              <h2 className="text-2xl font-semibold tracking-tight">Reset your password</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Enter your email and we'll send you a link to reset it.
+              </p>
+              <form onSubmit={forgotPassword} className="space-y-4 pt-6">
                 <Field label="Email" type="email" value={email} onChange={setEmail} />
-                <Field label="Password" type="password" value={password} onChange={setPassword} />
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing in…" : "Sign in"}
+                  {loading ? "Sending…" : "Send reset link"}
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(false)}
+                  className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
+                >
+                  Back to sign in
+                </button>
               </form>
-            </TabsContent>
-            <TabsContent value="signup">
-              <form onSubmit={signUp} className="space-y-4 pt-4">
-                <Field label="Email" type="email" value={email} onChange={setEmail} />
-                <Field
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={setPassword}
-                  minLength={6}
-                />
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account…" : "Create account"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Sign in to your advisor account, or create one.
+              </p>
+              <Tabs defaultValue="signin" className="mt-6">
+                <TabsList className="grid grid-cols-2 w-full">
+                  <TabsTrigger value="signin">Sign in</TabsTrigger>
+                  <TabsTrigger value="signup">Sign up</TabsTrigger>
+                </TabsList>
+                <TabsContent value="signin">
+                  <form onSubmit={signIn} className="space-y-4 pt-4">
+                    <Field label="Email" type="email" value={email} onChange={setEmail} />
+                    <Field label="Password" type="password" value={password} onChange={setPassword} />
+                    <div className="text-right -mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowForgot(true)}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Signing in…" : "Sign in"}
+                    </Button>
+                  </form>
+                </TabsContent>
+                <TabsContent value="signup">
+                  <form onSubmit={signUp} className="space-y-4 pt-4">
+                    <Field label="Email" type="email" value={email} onChange={setEmail} />
+                    <Field
+                      label="Password"
+                      type="password"
+                      value={password}
+                      onChange={setPassword}
+                      minLength={6}
+                    />
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Creating account…" : "Create account"}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
         </div>
       </div>
     </div>
