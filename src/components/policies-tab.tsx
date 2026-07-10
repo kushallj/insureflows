@@ -196,7 +196,10 @@ function PolicyDialog({
     renewal_date: policy?.renewal_date ?? "",
     status: policy?.status ?? "active",
     notes: policy?.notes ?? "",
+    document_path: policy?.document_path ?? null,
   }));
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // reset when policy changes
   const key = policy?.id ?? "new";
@@ -213,7 +216,47 @@ function PolicyDialog({
       renewal_date: policy?.renewal_date ?? "",
       status: policy?.status ?? "active",
       notes: policy?.notes ?? "",
+      document_path: policy?.document_path ?? null,
     });
+  }
+
+  async function handleFile(file: File) {
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("File too large (max 15 MB)");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { data: userData, error: uErr } = await supabase.auth.getUser();
+      if (uErr || !userData.user) throw new Error("Not signed in");
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${userData.user.id}/${crypto.randomUUID()}-${safeName}`;
+      const { error } = await supabase.storage
+        .from("policy-documents")
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      // remove previous file if replacing
+      if (form.document_path) {
+        await supabase.storage.from("policy-documents").remove([form.document_path]);
+      }
+      setForm((f) => ({ ...f, document_path: path }));
+      toast.success("Document uploaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function removeDoc() {
+    if (!form.document_path) return;
+    try {
+      await supabase.storage.from("policy-documents").remove([form.document_path]);
+    } catch {
+      // ignore
+    }
+    setForm((f) => ({ ...f, document_path: null }));
   }
 
   const mut = useMutation({
