@@ -352,6 +352,55 @@ function PolicyDialog({
               onChange={(e) => setForm({ ...form, renewal_date: e.target.value })}
             />
           </Field>
+          <Field label="Previous policy copy" span={2}>
+            {form.document_path ? (
+              <div className="flex items-center gap-2 rounded-md border p-2 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="truncate flex-1" title={form.document_path}>
+                  {form.document_path.split("/").pop()}
+                </span>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={removeDoc}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFile(f);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-1.5" />
+                  )}
+                  {uploading ? "Uploading…" : "Upload document"}
+                </Button>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  PDF or image, up to 15 MB.
+                </p>
+              </div>
+            )}
+          </Field>
           <Field label="Notes" span={2}>
             <Textarea
               rows={3}
