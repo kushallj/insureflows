@@ -140,6 +140,7 @@ function PolicyRow({ policy, onEdit }: { policy: Policy; onEdit: () => void }) {
             <span className="tabular-nums">Renewal {policy.renewal_date}</span>
           )}
         </div>
+        {policy.document_path && <DocumentLink path={policy.document_path} />}
       </div>
       <div className="flex items-center gap-1">
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
