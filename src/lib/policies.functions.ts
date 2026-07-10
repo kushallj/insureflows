@@ -19,6 +19,7 @@ export type Policy = {
   renewal_date: string | null;
   status: PolicyStatus;
   notes: string | null;
+  document_path: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -33,6 +34,7 @@ export type PolicyInput = {
   renewal_date?: string | null;
   status?: PolicyStatus;
   notes?: string | null;
+  document_path?: string | null;
 };
 
 function clean(input: Record<string, unknown>) {
@@ -145,3 +147,18 @@ export const markContacted = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const getPolicyDocumentUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { path: string }) => data)
+  .handler(async ({ data, context }) => {
+    if (!data.path.startsWith(`${context.userId}/`)) {
+      throw new Error("Not allowed");
+    }
+    const { data: signed, error } = await context.supabase.storage
+      .from("policy-documents")
+      .createSignedUrl(data.path, 60 * 10);
+    if (error) throw new Error(error.message);
+    return { url: signed.signedUrl };
+  });
+

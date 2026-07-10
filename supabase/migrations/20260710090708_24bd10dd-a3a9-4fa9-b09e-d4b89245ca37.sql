@@ -1,0 +1,1 @@
+ALTER TABLE public.policies ADD COLUMN IF NOT EXISTS document_path text;

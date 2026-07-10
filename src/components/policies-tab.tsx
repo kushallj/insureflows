@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -6,6 +6,7 @@ import {
   createPolicy,
   updatePolicy,
   deletePolicy,
+  getPolicyDocumentUrl,
   POLICY_TYPES,
   POLICY_STATUSES,
   type Policy,
@@ -13,6 +14,7 @@ import {
   type PolicyType,
   type PolicyStatus,
 } from "@/lib/policies.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +44,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, FileText, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -138,6 +140,7 @@ function PolicyRow({ policy, onEdit }: { policy: Policy; onEdit: () => void }) {
             <span className="tabular-nums">Renewal {policy.renewal_date}</span>
           )}
         </div>
+        {policy.document_path && <DocumentLink path={policy.document_path} />}
       </div>
       <div className="flex items-center gap-1">
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
@@ -193,7 +196,10 @@ function PolicyDialog({
     renewal_date: policy?.renewal_date ?? "",
     status: policy?.status ?? "active",
     notes: policy?.notes ?? "",
+    document_path: policy?.document_path ?? null,
   }));
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // reset when policy changes
   const key = policy?.id ?? "new";
@@ -210,7 +216,47 @@ function PolicyDialog({
       renewal_date: policy?.renewal_date ?? "",
       status: policy?.status ?? "active",
       notes: policy?.notes ?? "",
+      document_path: policy?.document_path ?? null,
     });
+  }
+
+  async function handleFile(file: File) {
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("File too large (max 15 MB)");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { data: userData, error: uErr } = await supabase.auth.getUser();
+      if (uErr || !userData.user) throw new Error("Not signed in");
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${userData.user.id}/${crypto.randomUUID()}-${safeName}`;
+      const { error } = await supabase.storage
+        .from("policy-documents")
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      // remove previous file if replacing
+      if (form.document_path) {
+        await supabase.storage.from("policy-documents").remove([form.document_path]);
+      }
+      setForm((f) => ({ ...f, document_path: path }));
+      toast.success("Document uploaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function removeDoc() {
+    if (!form.document_path) return;
+    try {
+      await supabase.storage.from("policy-documents").remove([form.document_path]);
+    } catch {
+      // ignore
+    }
+    setForm((f) => ({ ...f, document_path: null }));
   }
 
   const mut = useMutation({
@@ -306,6 +352,55 @@ function PolicyDialog({
               onChange={(e) => setForm({ ...form, renewal_date: e.target.value })}
             />
           </Field>
+          <Field label="Previous policy copy" span={2}>
+            {form.document_path ? (
+              <div className="flex items-center gap-2 rounded-md border p-2 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="truncate flex-1" title={form.document_path}>
+                  {form.document_path.split("/").pop()}
+                </span>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={removeDoc}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFile(f);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-1.5" />
+                  )}
+                  {uploading ? "Uploading…" : "Upload document"}
+                </Button>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  PDF or image, up to 15 MB.
+                </p>
+              </div>
+            )}
+          </Field>
           <Field label="Notes" span={2}>
             <Textarea
               rows={3}
@@ -341,5 +436,32 @@ function Field({
       <Label className="text-xs">{label}</Label>
       {children}
     </div>
+  );
+}
+
+function DocumentLink({ path }: { path: string }) {
+  const getUrl = useServerFn(getPolicyDocumentUrl);
+  const [loading, setLoading] = useState(false);
+  const filename = path.split("/").pop() ?? "document";
+  async function open() {
+    setLoading(true);
+    try {
+      const { url } = await getUrl({ data: { path } });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open");
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={open}
+      className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+    >
+      {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+      <span className="truncate max-w-[200px]">{filename}</span>
+    </button>
   );
 }
