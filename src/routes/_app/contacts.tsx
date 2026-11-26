@@ -153,10 +153,16 @@ function ContactsPage() {
   const contacts = useMemo(() => listQuery.data?.rows ?? [], [listQuery.data]);
   const total = listQuery.data?.total ?? 0;
   const pages = lastPage(total, CONTACTS_PAGE_SIZE);
-  // Deleting or merging can leave us past the last page: step back to it.
+  // Deleting or merging can leave us past the last page: step back to it. Only trust a settled answer for the page
+  // asked for, never the previous page kept on screen or a cached total that is still being refreshed.
+  const settled =
+    !!listQuery.data &&
+    !listQuery.isPlaceholderData &&
+    !listQuery.isFetching &&
+    listQuery.data.page === page;
   useEffect(() => {
-    if (listQuery.data && page > pages) setPage(pages);
-  }, [listQuery.data, page, pages]);
+    if (settled && page > pages) setPage(pages);
+  }, [settled, page, pages]);
   const tagsQuery = useQuery({
     queryKey: ["contacts", "tags"],
     queryFn: () => tagsFn(),
