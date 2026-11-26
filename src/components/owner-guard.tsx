@@ -22,11 +22,21 @@ export function useOwnerGuard() {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const pending = useRef<(() => void) | null>(null);
+  // Bumped whenever the dialog closes or opens for a new action, so a PIN check still in flight can't run a cancelled
+  // or replaced action when its answer arrives.
+  const attempt = useRef(0);
+
+  function close() {
+    attempt.current += 1;
+    pending.current = null;
+    setLabel(null);
+  }
 
   async function guard(what: string, action: () => void) {
     try {
       const status = await getOwnerLockStatus();
       if (isUnlocked(status)) return action();
+      attempt.current += 1;
       pending.current = action;
       setPin("");
       setLabel(what);
@@ -37,9 +47,12 @@ export function useOwnerGuard() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const id = ++attempt.current;
     setBusy(true);
     try {
-      if (!(await unlockOwnerActions(pin))) {
+      const ok = await unlockOwnerActions(pin);
+      if (id !== attempt.current) return;
+      if (!ok) {
         toast.error("Wrong PIN");
         setPin("");
         return;
@@ -49,6 +62,7 @@ export function useOwnerGuard() {
       pending.current = null;
       run?.();
     } catch (err) {
+      if (id !== attempt.current) return;
       toast.error(err instanceof Error ? err.message : "Couldn't unlock");
     } finally {
       setBusy(false);
@@ -56,7 +70,7 @@ export function useOwnerGuard() {
   }
 
   const dialog = (
-    <Dialog open={label != null} onOpenChange={(o) => !o && setLabel(null)}>
+    <Dialog open={label != null} onOpenChange={(o) => !o && close()}>
       <DialogContent className="sm:max-w-sm">
         <form onSubmit={submit} className="space-y-4">
           <DialogHeader>
@@ -79,7 +93,7 @@ export function useOwnerGuard() {
             aria-label="Owner PIN"
           />
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setLabel(null)}>
+            <Button type="button" variant="outline" onClick={close}>
               Cancel
             </Button>
             <Button type="submit" disabled={pin.length < 4 || busy}>
