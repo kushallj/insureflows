@@ -25,6 +25,7 @@ import {
 } from "@/lib/network.functions";
 import { downloadText, toCsv } from "@/lib/contact-import";
 import { ReferralAskDialog } from "@/components/referral-ask-dialog";
+import { useOwnerGuard } from "@/components/owner-guard";
 import { AskTable, fmtDate } from "@/components/referral-asks-table";
 import {
   DropdownMenu,
@@ -129,6 +130,7 @@ export const Route = createFileRoute("/_app/contacts")({
 });
 
 function ContactsPage() {
+  const owner = useOwnerGuard();
   const [search, setSearch] = useState("");
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [tagFilter, setTagFilter] = useState<string[]>([]);
@@ -217,7 +219,10 @@ function ContactsPage() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled={exportAll.isPending} onSelect={() => exportAll.mutate()}>
+              <DropdownMenuItem
+                disabled={exportAll.isPending}
+                onSelect={() => owner.guard("export all contacts", () => exportAll.mutate())}
+              >
                 <Download className="h-4 w-4 mr-2" />{" "}
                 {exportAll.isPending ? "Exporting…" : "Export all (CSV)"}
               </DropdownMenuItem>
@@ -313,6 +318,7 @@ function ContactsPage() {
 
       <ContactDrawer contact={selected} onClose={() => setSelectedId(null)} />
       <AddContactDialog open={addOpen} onOpenChange={setAddOpen} />
+      {owner.dialog}
     </div>
   );
 }
@@ -503,6 +509,7 @@ function toDateTimeInput(v: string | null) {
 }
 
 function ContactDrawer({ contact, onClose }: { contact: Contact | null; onClose: () => void }) {
+  const owner = useOwnerGuard();
   const queryClient = useQueryClient();
   const updateFn = useServerFn(updateContact);
   const deleteFn = useServerFn(deleteContact);
@@ -689,10 +696,15 @@ function ContactDrawer({ contact, onClose }: { contact: Contact | null; onClose:
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => del.mutate()}>Delete</AlertDialogAction>
+                    <AlertDialogAction
+                      onClick={() => owner.guard("delete this contact", () => del.mutate())}
+                    >
+                      Delete
+                    </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              {owner.dialog}
             </SheetFooter>
           </>
         )}
@@ -1115,6 +1127,7 @@ function BulkBar({
   available: string[];
   onClear: () => void;
 }) {
+  const owner = useOwnerGuard();
   const queryClient = useQueryClient();
   const tagFn = useServerFn(bulkUpdateTags);
   const [tag, setTag] = useState("");
@@ -1199,9 +1212,11 @@ function BulkBar({
         size="sm"
         className="h-8"
         onClick={() =>
-          downloadText(
-            `insureflow-contacts-selected-${new Date().toISOString().slice(0, 10)}.csv`,
-            contactsCsv(rows),
+          owner.guard(`export ${rows.length} contact${rows.length === 1 ? "" : "s"}`, () =>
+            downloadText(
+              `insureflow-contacts-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+              contactsCsv(rows),
+            ),
           )
         }
       >
@@ -1210,6 +1225,7 @@ function BulkBar({
       <Button variant="ghost" size="sm" className="h-8" onClick={onClear}>
         Clear
       </Button>
+      {owner.dialog}
     </div>
   );
 }

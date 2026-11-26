@@ -19,6 +19,7 @@ import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppReferralsRouteImport } from './routes/_app/referrals'
 import { Route as AppRenewalsRouteImport } from './routes/_app/renewals'
 import { Route as AppSegmentsRouteImport } from './routes/_app/segments'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppTasksRouteImport } from './routes/_app/tasks'
 import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
 import { Route as AppCampaignsIdRouteImport } from './routes/_app/campaigns_.$id'
@@ -77,6 +78,11 @@ const AppRenewalsRoute = AppRenewalsRouteImport.update({
 const AppSegmentsRoute = AppSegmentsRouteImport.update({
   id: '/segments',
   path: '/segments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTasksRoute = AppTasksRouteImport.update({
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/referrals': typeof AppReferralsRoute
   '/renewals': typeof AppRenewalsRoute
   '/segments': typeof AppSegmentsRoute
+  '/settings': typeof AppSettingsRoute
   '/tasks': typeof AppTasksRoute
   '/templates': typeof AppTemplatesRoute
   '/campaigns/$id': typeof AppCampaignsIdRouteWithChildren
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/referrals': typeof AppReferralsRoute
   '/renewals': typeof AppRenewalsRoute
   '/segments': typeof AppSegmentsRoute
+  '/settings': typeof AppSettingsRoute
   '/tasks': typeof AppTasksRoute
   '/templates': typeof AppTemplatesRoute
   '/campaigns/$id': typeof AppCampaignsIdRouteWithChildren
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/_app/referrals': typeof AppReferralsRoute
   '/_app/renewals': typeof AppRenewalsRoute
   '/_app/segments': typeof AppSegmentsRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/tasks': typeof AppTasksRoute
   '/_app/templates': typeof AppTemplatesRoute
   '/_app/campaigns_/$id': typeof AppCampaignsIdRouteWithChildren
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/referrals'
     | '/renewals'
     | '/segments'
+    | '/settings'
     | '/tasks'
     | '/templates'
     | '/campaigns/$id'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/referrals'
     | '/renewals'
     | '/segments'
+    | '/settings'
     | '/tasks'
     | '/templates'
     | '/campaigns/$id'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/_app/referrals'
     | '/_app/renewals'
     | '/_app/segments'
+    | '/_app/settings'
     | '/_app/tasks'
     | '/_app/templates'
     | '/_app/campaigns_/$id'
@@ -339,6 +351,13 @@ declare module '@tanstack/react-router' {
       path: '/segments'
       fullPath: '/segments'
       preLoaderRoute: typeof AppSegmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/tasks': {
@@ -433,6 +452,7 @@ interface AppRouteChildren {
   AppReferralsRoute: typeof AppReferralsRoute
   AppRenewalsRoute: typeof AppRenewalsRoute
   AppSegmentsRoute: typeof AppSegmentsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppTasksRoute: typeof AppTasksRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
   AppCampaignsIdRoute: typeof AppCampaignsIdRouteWithChildren
@@ -451,6 +471,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReferralsRoute: AppReferralsRoute,
   AppRenewalsRoute: AppRenewalsRoute,
   AppSegmentsRoute: AppSegmentsRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppTasksRoute: AppTasksRoute,
   AppTemplatesRoute: AppTemplatesRoute,
   AppCampaignsIdRoute: AppCampaignsIdRouteWithChildren,

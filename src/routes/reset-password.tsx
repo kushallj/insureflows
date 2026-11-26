@@ -84,6 +84,14 @@ function ResetPasswordPage() {
           <Button type="submit" className="w-full" disabled={!ready || loading}>
             {loading ? "Updating…" : "Update password"}
           </Button>
+          {ready && (
+            <Link
+              to="/settings"
+              className="block text-center text-sm text-muted-foreground underline underline-offset-2"
+            >
+              Keep my password and go to Settings (e.g. to remove a forgotten owner PIN)
+            </Link>
+          )}
           <Link
             to="/auth"
             className="text-sm text-muted-foreground hover:text-foreground block text-center"

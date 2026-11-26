@@ -44,6 +44,16 @@ async function allContacts(db: Db, userId: string, columns = "*"): Promise<Conta
   return out;
 }
 
+/**
+ * Protected actions (export, delete, merge) need the owner's PIN while one is set: the database says whether the PIN
+ * was entered in the last few minutes. Contact deletes are also refused by the database itself (RLS).
+ */
+export async function requireOwnerUnlock(db: Db) {
+  const { data, error } = await db.rpc("owner_actions_allowed");
+  if (error) throw new Error(error.message);
+  if (data === false) throw new Error("Owner PIN required: enter your PIN and try again.");
+}
+
 function checkIds(ids: unknown): string[] {
   if (!Array.isArray(ids) || !ids.length) throw new Error("Choose at least one contact");
   if (ids.length > MAX_IDS) throw new Error(`Choose at most ${MAX_IDS} contacts at a time`);
@@ -65,7 +75,18 @@ function cleanTag(t: string): string {
 
 export const exportAllContacts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => allContacts(context.supabase, context.userId));
+  .handler(async ({ context }) => {
+    await requireOwnerUnlock(context.supabase);
+    return allContacts(context.supabase, context.userId);
+  });
+
+/** Lets the page check the PIN before exporting rows it already has (the "Export selected" button). */
+export const checkOwnerUnlock = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireOwnerUnlock(context.supabase);
+    return { ok: true };
+  });
 
 // ── duplicates ───────────────────────────────────────────────────────────────────────────────────────────
 
@@ -91,6 +112,8 @@ export const mergeContacts = createServerFn({ method: "POST" })
     const mergeIds = checkIds(data.merge).filter((id) => id !== keepId);
     if (!mergeIds.length) throw new Error("Choose at least one contact to merge");
     if (mergeIds.length > 9) throw new Error("Merge at most 10 contacts at a time");
+    // Checked first: a merge ends by deleting contacts, so a locked account must not move anything part-way.
+    await requireOwnerUnlock(db);
 
     const { data: rows, error } = await db
       .from("contacts")
