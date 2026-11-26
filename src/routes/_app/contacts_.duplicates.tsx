@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Merge } from "lucide-react";
 import { findDuplicateGroups, mergeContacts, type DuplicateGroup } from "@/lib/network.functions";
 import { StageBadge } from "@/components/stage-badge";
+import { useOwnerGuard } from "@/components/owner-guard";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -71,6 +72,7 @@ function DuplicatesPage() {
 function GroupCard({ group }: { group: DuplicateGroup }) {
   const queryClient = useQueryClient();
   const mergeFn = useServerFn(mergeContacts);
+  const owner = useOwnerGuard();
   // Keep the most complete contact by default.
   const filled = (c: DuplicateGroup["contacts"][number]) =>
     Object.values(c).filter((v) => v != null && v !== "" && !(Array.isArray(v) && !v.length))
@@ -144,10 +146,15 @@ function GroupCard({ group }: { group: DuplicateGroup }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => merge.mutate()}>Merge</AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => owner.guard("merge these contacts", () => merge.mutate())}
+            >
+              Merge
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {owner.dialog}
     </section>
   );
 }

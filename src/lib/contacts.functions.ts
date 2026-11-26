@@ -1,11 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type {
-  Contact,
-  ContactInput,
-  PipelineStage,
-  SortKey,
-} from "./contact-fields";
+import type { Contact, ContactInput, PipelineStage, SortKey } from "./contact-fields";
 import { emailKey, phoneKey } from "./contact-keys";
 
 type ListArgs = {
@@ -27,9 +22,7 @@ export const listContacts = createServerFn({ method: "POST" })
     if (data.search && data.search.trim()) {
       const s = data.search.trim().replace(/[%,]/g, "");
       const like = `%${s}%`;
-      q = q.or(
-        `name.ilike.${like},phone.ilike.${like},email.ilike.${like},city.ilike.${like}`,
-      );
+      q = q.or(`name.ilike.${like},phone.ilike.${like},email.ilike.${like},city.ilike.${like}`);
     }
 
     switch (data.sort ?? "lead_score_desc") {
@@ -135,6 +128,12 @@ export const deleteContact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data, context }) => {
+    // While an owner PIN is set the database refuses the delete silently (RLS), so say why instead.
+    const { data: allowed, error: lockErr } = await (context.supabase as any).rpc(
+      "owner_actions_allowed",
+    );
+    if (lockErr) throw new Error(lockErr.message);
+    if (allowed === false) throw new Error("Owner PIN required: enter your PIN and try again.");
     const { error } = await context.supabase
       .from("contacts")
       .delete()
@@ -196,8 +195,9 @@ export const bulkCreateContacts = createServerFn({ method: "POST" })
     let inserted = 0;
     for (let i = 0; i < rows.length; i += 200) {
       const chunk = rows.slice(i, i + 200);
-      const { error, count } = await (context.supabase.from("contacts") as any)
-        .insert(chunk, { count: "exact" });
+      const { error, count } = await (context.supabase.from("contacts") as any).insert(chunk, {
+        count: "exact",
+      });
       if (error) throw new Error(error.message);
       inserted += count ?? chunk.length;
     }

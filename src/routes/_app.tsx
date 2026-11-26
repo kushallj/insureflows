@@ -13,6 +13,7 @@ import {
   BarChart3,
   Menu,
   Handshake,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,13 @@ function AppLayout() {
   const footer = (
     <div className="p-3 border-t space-y-2 shrink-0">
       <div className="text-xs text-muted-foreground truncate px-1">{email}</div>
+      <Link
+        to="/settings"
+        className="flex items-center rounded-md px-3 py-1.5 text-sm hover:bg-sidebar-accent"
+        onClick={() => setMobileOpen(false)}
+      >
+        <Settings className="h-4 w-4 mr-2" /> Settings
+      </Link>
       <Button variant="ghost" size="sm" className="w-full justify-start" onClick={signOut}>
         <LogOut className="h-4 w-4 mr-2" /> Sign out
       </Button>
@@ -116,7 +124,10 @@ function AppLayout() {
 
       {/* Mobile drawer */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground flex flex-col">
+        <SheetContent
+          side="left"
+          className="p-0 w-64 bg-sidebar text-sidebar-foreground flex flex-col"
+        >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           {brand}
           {nav(() => setMobileOpen(false))}
