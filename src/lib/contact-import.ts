@@ -264,11 +264,12 @@ export async function readContactFile(file: File): Promise<ParsedFile> {
 // ── column mapping ───────────────────────────────────────────────────────────────────────────────────────
 
 /** Import-only fields that are combined into real ones (first + last -> name, mobile preferred over phone). */
-export type ExtraField = "first_name" | "last_name" | "mobile";
+export type ExtraField = "first_name" | "middle_name" | "last_name" | "mobile";
 export type FieldKey = keyof ContactInput | ExtraField | "__ignore";
 
 export const EXTRA_FIELDS: { key: ExtraField; label: string }[] = [
   { key: "first_name", label: "First name (joined into Name)" },
+  { key: "middle_name", label: "Middle name (joined into Name)" },
   { key: "last_name", label: "Last name (joined into Name)" },
   { key: "mobile", label: "Mobile (used before Phone)" },
 ];
@@ -281,6 +282,8 @@ const ALIASES: Record<string, FieldKey> = {
   "display name": "name",
   "first name": "first_name",
   "given name": "first_name",
+  "middle name": "middle_name",
+  "additional name": "middle_name",
   "last name": "last_name",
   "family name": "last_name",
   surname: "last_name",
@@ -359,6 +362,19 @@ export function hasNameMapping(mapping: Record<string, FieldKey>): boolean {
 }
 
 /** A raw row -> mapped values, with first+last joined into name and mobile preferred over phone. */
+/**
+ * Tags from a labels column, as "a, b". Google Contacts separates labels with ":::" and adds system labels such as
+ * "* myContacts" and "* starred" to every contact; those are dropped, so they don't become a tag on everyone.
+ */
+export function cleanLabels(value: string): string {
+  const labels = value
+    .split(/:::|[,;]/)
+    .map((t) => t.trim())
+    // "Imported on 6/8/22" is also added by Google itself, not by the advisor.
+    .filter((t) => t && !t.startsWith("* ") && !/^imported on\b/i.test(t));
+  return Array.from(new Set(labels)).join(", ");
+}
+
 export function mapRow(
   raw: Record<string, string>,
   mapping: Record<string, FieldKey>,
@@ -370,9 +386,19 @@ export function mapRow(
     const value = (v ?? "").trim();
     if (value && !mapped[field]) mapped[field] = value;
   }
-  if (!mapped.name) mapped.name = [mapped.first_name, mapped.last_name].filter(Boolean).join(" ");
+  if (!mapped.name) {
+    mapped.name = [mapped.first_name, mapped.middle_name, mapped.last_name]
+      .filter(Boolean)
+      .join(" ");
+  }
   if (mapped.mobile) mapped.phone = mapped.mobile;
+  // Google Contacts puts several numbers or emails in one cell as "a ::: b": keep the first, so the number is
+  // dialable and duplicate checks compare the right one.
+  for (const f of ["phone", "email"]) if (mapped[f]) mapped[f] = mapped[f].split(":::")[0].trim();
+  if (mapped.tags) mapped.tags = cleanLabels(mapped.tags);
+  if (!mapped.tags) delete mapped.tags;
   delete mapped.first_name;
+  delete mapped.middle_name;
   delete mapped.last_name;
   delete mapped.mobile;
   return mapped;
