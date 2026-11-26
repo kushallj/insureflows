@@ -237,3 +237,22 @@ test("the referral draft uses only names on screen and links open the advisor's 
   assert.ok(whatsappLink("9876543210", "Hi & bye")!.endsWith("?text=Hi%20%26%20bye"));
   assert.equal(mailtoLink("bad", "x"), null);
 });
+
+test("Google exports: middle names kept, first of several numbers, Google's own labels dropped", () => {
+  const g = parseCsv(
+    "First Name,Middle Name,Last Name,Labels,Phone 1 - Label,Phone 1 - Value,E-mail 1 - Value\n" +
+      "Ram,Kumar,Sharma,* myContacts ::: * starred ::: Family ::: Imported on 6/8/22,Mobile,+91 98765 43210 ::: 080 2222 3333,a@x.com ::: b@x.com\n" +
+      "Sita,,,* myContacts,Mobile,9988776655,\n",
+  );
+  const map = guessMapping(g.headers);
+  assert.equal(map["Middle Name"], "middle_name");
+  assert.equal(map["Labels"], "tags");
+  const a = mapRow(g.rows[0], map);
+  assert.deepEqual(
+    [a.name, a.phone, a.email, a.tags],
+    ["Ram Kumar Sharma", "+91 98765 43210", "a@x.com", "Family"],
+  );
+  const b = mapRow(g.rows[1], map);
+  assert.equal(b.name, "Sita");
+  assert.equal(b.tags, undefined); // only Google's own labels: no tag at all
+});
