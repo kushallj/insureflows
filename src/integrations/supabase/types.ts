@@ -262,6 +262,39 @@ export type Database = {
         }
         Relationships: []
       }
+      owner_locks: {
+        Row: {
+          blocked_until: string | null
+          created_at: string
+          failed_attempts: number
+          pin_hash: string
+          unlocked_session: string | null
+          unlocked_until: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string
+          failed_attempts?: number
+          pin_hash: string
+          unlocked_session?: string | null
+          unlocked_until?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string
+          failed_attempts?: number
+          pin_hash?: string
+          unlocked_session?: string | null
+          unlocked_until?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           contact_id: string
@@ -486,7 +519,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      _current_session_id: { Args: never; Returns: string }
+      _owner_pin_ok: { Args: { p_pin: string }; Returns: boolean }
+      lock_owner_actions: { Args: never; Returns: undefined }
+      owner_actions_allowed: { Args: never; Returns: boolean }
+      owner_lock_status: { Args: never; Returns: Json }
+      remove_owner_pin: { Args: { p_current_pin?: string }; Returns: boolean }
+      set_owner_pin: {
+        Args: { p_current_pin?: string; p_new_pin: string }
+        Returns: string
+      }
+      unlock_owner_actions: { Args: { p_pin: string }; Returns: string }
     }
     Enums: {
       activity_type:

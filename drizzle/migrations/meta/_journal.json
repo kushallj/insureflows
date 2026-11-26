@@ -8,6 +8,13 @@
       "when": 1795664431268,
       "tag": "0000_network_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795702739630,
+      "tag": "0001_owner_pin",
+      "breakpoints": true
     }
   ]
 }
