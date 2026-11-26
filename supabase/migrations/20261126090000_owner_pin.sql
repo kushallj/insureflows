@@ -2,6 +2,8 @@
 -- signs in with the advisor's shared password. The PIN is stored only as a bcrypt hash, is never readable through the
 -- API, and can only be changed with the current PIN or removed from a session opened with an emailed reset link.
 -- Enforcement is in the database: while a PIN is set, contacts can only be deleted during a short unlock window.
+-- The unlock belongs to the sign-in session that entered the PIN (the JWT's session_id), not to the whole account:
+-- someone else signed in with the same password in another browser or tool stays locked.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
@@ -9,6 +11,7 @@ CREATE TABLE public.owner_locks (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   pin_hash text NOT NULL,
   unlocked_until timestamptz,
+  unlocked_session uuid,
   failed_attempts integer NOT NULL DEFAULT 0,
   blocked_until timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -20,14 +23,24 @@ ALTER TABLE public.owner_locks ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.owner_locks FROM anon, authenticated;
 GRANT ALL ON public.owner_locks TO service_role;
 
--- True when no PIN is set, or the PIN was entered in the last few minutes.
+-- The sign-in session of the current request (NULL when the token has none).
+CREATE OR REPLACE FUNCTION public._current_session_id()
+RETURNS uuid
+LANGUAGE sql STABLE SET search_path = public
+AS $$
+  SELECT CASE WHEN auth.jwt()->>'session_id' ~* '^[0-9a-f-]{36}$' THEN (auth.jwt()->>'session_id')::uuid END;
+$$;
+
+-- True when no PIN is set, or the PIN was entered in this same session in the last few minutes.
 CREATE OR REPLACE FUNCTION public.owner_actions_allowed()
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
   SELECT NOT EXISTS (
     SELECT 1 FROM public.owner_locks
-    WHERE user_id = auth.uid() AND (unlocked_until IS NULL OR unlocked_until <= now())
+    WHERE user_id = auth.uid()
+      -- COALESCE: a NULL anywhere (no session in the token, never unlocked) must count as locked, not unknown.
+      AND NOT COALESCE(unlocked_until > now() AND unlocked_session = public._current_session_id(), false)
   );
 $$;
 
@@ -37,7 +50,8 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
   SELECT jsonb_build_object(
     'enabled', l.user_id IS NOT NULL,
-    'unlocked_until', CASE WHEN l.unlocked_until > now() THEN l.unlocked_until END,
+    'unlocked_until', CASE WHEN l.unlocked_until > now() AND l.unlocked_session = public._current_session_id()
+                           THEN l.unlocked_until END,
     'blocked_until', CASE WHEN l.blocked_until > now() THEN l.blocked_until END,
     'recovery_session', COALESCE((
       SELECT bool_or(m->>'method' IN ('recovery', 'otp', 'magiclink'))
@@ -88,20 +102,24 @@ BEGIN
   INSERT INTO public.owner_locks (user_id, pin_hash)
   VALUES (auth.uid(), extensions.crypt(p_new_pin, extensions.gen_salt('bf')))
   ON CONFLICT (user_id) DO UPDATE
-    SET pin_hash = EXCLUDED.pin_hash, unlocked_until = NULL, failed_attempts = 0, blocked_until = NULL, updated_at = now();
+    SET pin_hash = EXCLUDED.pin_hash, unlocked_until = NULL, unlocked_session = NULL, failed_attempts = 0, blocked_until = NULL, updated_at = now();
   RETURN NULL;
 END;
 $$;
 
--- Unlocks protected actions for 5 minutes. Returns NULL for a wrong PIN.
+-- Unlocks protected actions for 5 minutes, for this sign-in session only. Returns NULL for a wrong PIN.
 CREATE OR REPLACE FUNCTION public.unlock_owner_actions(p_pin text)
 RETURNS timestamptz
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions
 AS $$
-DECLARE v_until timestamptz := now() + interval '5 minutes';
+DECLARE
+  v_until timestamptz := now() + interval '5 minutes';
+  v_session uuid := public._current_session_id();
 BEGIN
+  IF v_session IS NULL THEN RAISE EXCEPTION 'This sign-in has no session. Sign out and in again.'; END IF;
   IF NOT public._owner_pin_ok(p_pin) THEN RETURN NULL; END IF;
-  UPDATE public.owner_locks SET unlocked_until = v_until, updated_at = now() WHERE user_id = auth.uid();
+  UPDATE public.owner_locks SET unlocked_until = v_until, unlocked_session = v_session, updated_at = now()
+   WHERE user_id = auth.uid();
   RETURN v_until;
 END;
 $$;
@@ -110,7 +128,8 @@ CREATE OR REPLACE FUNCTION public.lock_owner_actions()
 RETURNS void
 LANGUAGE sql SECURITY DEFINER SET search_path = public
 AS $$
-  UPDATE public.owner_locks SET unlocked_until = NULL, updated_at = now() WHERE user_id = auth.uid();
+  UPDATE public.owner_locks SET unlocked_until = NULL, unlocked_session = NULL, updated_at = now()
+   WHERE user_id = auth.uid();
 $$;
 
 -- Remove the PIN: needs the current PIN, or a session opened from an emailed reset/magic link (proves inbox access).
@@ -131,6 +150,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public._owner_pin_ok(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public._current_session_id() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.owner_actions_allowed(), public.owner_lock_status(), public.set_owner_pin(text, text),
   public.unlock_owner_actions(text), public.lock_owner_actions(), public.remove_owner_pin(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.owner_actions_allowed(), public.owner_lock_status(), public.set_owner_pin(text, text),

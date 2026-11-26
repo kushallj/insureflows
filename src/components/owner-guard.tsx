@@ -78,7 +78,7 @@ export function useOwnerGuard() {
               <Lock className="h-4 w-4" /> Owner PIN required
             </DialogTitle>
             <DialogDescription>
-              Enter your owner PIN to {label}. It stays unlocked for 5 minutes.
+              Enter your owner PIN to {label}. This browser stays unlocked for 5 minutes.
             </DialogDescription>
           </DialogHeader>
           <Input

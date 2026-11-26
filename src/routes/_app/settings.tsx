@@ -209,8 +209,9 @@ function OwnerPinCard({ email }: { email: string | null }) {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Don't share it with anyone who uses your login. If you forget it, you can remove it with
-            a link sent to your email.
+            Don't share it with anyone who uses your login. Entering it unlocks only the browser you
+            typed it in, for 5 minutes; anyone else signed in with your password stays locked. If
+            you forget it, you can remove it with a link sent to your email.
           </p>
           <Button type="submit" size="sm" disabled={busy || next.length < 4}>
             Set PIN
@@ -222,7 +223,8 @@ function OwnerPinCard({ email }: { email: string | null }) {
             <span className="flex items-center gap-2">
               {unlocked ? (
                 <>
-                  <LockOpen className="h-4 w-4 text-stage-proposal-foreground" /> Unlocked until{" "}
+                  <LockOpen className="h-4 w-4 text-stage-proposal-foreground" /> Unlocked in this
+                  browser until{" "}
                   {new Date(status.unlocked_until!).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
