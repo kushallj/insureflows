@@ -52,6 +52,7 @@ export type Contact = {
   next_followup_at: string | null;
   notes: string | null;
   ai_summary: string | null;
+  referred_by_contact_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -78,6 +79,7 @@ export type ContactInput = {
   last_contact_at?: string | null;
   next_followup_at?: string | null;
   notes?: string | null;
+  referred_by_contact_id?: string | null;
 };
 
 export const IMPORTABLE_FIELDS: { key: keyof ContactInput; label: string }[] = [

@@ -16,13 +16,16 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AppAnalyticsRouteImport } from './routes/_app/analytics'
 import { Route as AppCampaignsRouteImport } from './routes/_app/campaigns'
 import { Route as AppContactsRouteImport } from './routes/_app/contacts'
+import { Route as AppReferralsRouteImport } from './routes/_app/referrals'
 import { Route as AppRenewalsRouteImport } from './routes/_app/renewals'
 import { Route as AppSegmentsRouteImport } from './routes/_app/segments'
 import { Route as AppTasksRouteImport } from './routes/_app/tasks'
 import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
 import { Route as AppCampaignsIdRouteImport } from './routes/_app/campaigns_.$id'
 import { Route as AppCampaignsNewRouteImport } from './routes/_app/campaigns_.new'
+import { Route as AppContactsDuplicatesRouteImport } from './routes/_app/contacts_.duplicates'
 import { Route as AppContactsImportRouteImport } from './routes/_app/contacts_.import'
+import { Route as AppContactsTagsRouteImport } from './routes/_app/contacts_.tags'
 import { Route as AppSegmentsIdRouteImport } from './routes/_app/segments_.$id'
 import { Route as AppSegmentsNewRouteImport } from './routes/_app/segments_.new'
 import { Route as AppCampaignsIdEditRouteImport } from './routes/_app/campaigns_.$id.edit'
@@ -61,6 +64,11 @@ const AppContactsRoute = AppContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AppRoute,
 } as any)
+const AppReferralsRoute = AppReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppRenewalsRoute = AppRenewalsRouteImport.update({
   id: '/renewals',
   path: '/renewals',
@@ -91,9 +99,19 @@ const AppCampaignsNewRoute = AppCampaignsNewRouteImport.update({
   path: '/campaigns/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppContactsDuplicatesRoute = AppContactsDuplicatesRouteImport.update({
+  id: '/contacts_/duplicates',
+  path: '/contacts/duplicates',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContactsImportRoute = AppContactsImportRouteImport.update({
   id: '/contacts_/import',
   path: '/contacts/import',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContactsTagsRoute = AppContactsTagsRouteImport.update({
+  id: '/contacts_/tags',
+  path: '/contacts/tags',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSegmentsIdRoute = AppSegmentsIdRouteImport.update({
@@ -119,13 +137,16 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AppAnalyticsRoute
   '/campaigns': typeof AppCampaignsRoute
   '/contacts': typeof AppContactsRoute
+  '/referrals': typeof AppReferralsRoute
   '/renewals': typeof AppRenewalsRoute
   '/segments': typeof AppSegmentsRoute
   '/tasks': typeof AppTasksRoute
   '/templates': typeof AppTemplatesRoute
   '/campaigns/$id': typeof AppCampaignsIdRouteWithChildren
   '/campaigns/new': typeof AppCampaignsNewRoute
+  '/contacts/duplicates': typeof AppContactsDuplicatesRoute
   '/contacts/import': typeof AppContactsImportRoute
+  '/contacts/tags': typeof AppContactsTagsRoute
   '/segments/$id': typeof AppSegmentsIdRoute
   '/segments/new': typeof AppSegmentsNewRoute
   '/campaigns/$id/edit': typeof AppCampaignsIdEditRoute
@@ -137,13 +158,16 @@ export interface FileRoutesByTo {
   '/analytics': typeof AppAnalyticsRoute
   '/campaigns': typeof AppCampaignsRoute
   '/contacts': typeof AppContactsRoute
+  '/referrals': typeof AppReferralsRoute
   '/renewals': typeof AppRenewalsRoute
   '/segments': typeof AppSegmentsRoute
   '/tasks': typeof AppTasksRoute
   '/templates': typeof AppTemplatesRoute
   '/campaigns/$id': typeof AppCampaignsIdRouteWithChildren
   '/campaigns/new': typeof AppCampaignsNewRoute
+  '/contacts/duplicates': typeof AppContactsDuplicatesRoute
   '/contacts/import': typeof AppContactsImportRoute
+  '/contacts/tags': typeof AppContactsTagsRoute
   '/segments/$id': typeof AppSegmentsIdRoute
   '/segments/new': typeof AppSegmentsNewRoute
   '/campaigns/$id/edit': typeof AppCampaignsIdEditRoute
@@ -157,13 +181,16 @@ export interface FileRoutesById {
   '/_app/analytics': typeof AppAnalyticsRoute
   '/_app/campaigns': typeof AppCampaignsRoute
   '/_app/contacts': typeof AppContactsRoute
+  '/_app/referrals': typeof AppReferralsRoute
   '/_app/renewals': typeof AppRenewalsRoute
   '/_app/segments': typeof AppSegmentsRoute
   '/_app/tasks': typeof AppTasksRoute
   '/_app/templates': typeof AppTemplatesRoute
   '/_app/campaigns_/$id': typeof AppCampaignsIdRouteWithChildren
   '/_app/campaigns_/new': typeof AppCampaignsNewRoute
+  '/_app/contacts_/duplicates': typeof AppContactsDuplicatesRoute
   '/_app/contacts_/import': typeof AppContactsImportRoute
+  '/_app/contacts_/tags': typeof AppContactsTagsRoute
   '/_app/segments_/$id': typeof AppSegmentsIdRoute
   '/_app/segments_/new': typeof AppSegmentsNewRoute
   '/_app/campaigns_/$id/edit': typeof AppCampaignsIdEditRoute
@@ -177,13 +204,16 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/campaigns'
     | '/contacts'
+    | '/referrals'
     | '/renewals'
     | '/segments'
     | '/tasks'
     | '/templates'
     | '/campaigns/$id'
     | '/campaigns/new'
+    | '/contacts/duplicates'
     | '/contacts/import'
+    | '/contacts/tags'
     | '/segments/$id'
     | '/segments/new'
     | '/campaigns/$id/edit'
@@ -195,13 +225,16 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/campaigns'
     | '/contacts'
+    | '/referrals'
     | '/renewals'
     | '/segments'
     | '/tasks'
     | '/templates'
     | '/campaigns/$id'
     | '/campaigns/new'
+    | '/contacts/duplicates'
     | '/contacts/import'
+    | '/contacts/tags'
     | '/segments/$id'
     | '/segments/new'
     | '/campaigns/$id/edit'
@@ -214,13 +247,16 @@ export interface FileRouteTypes {
     | '/_app/analytics'
     | '/_app/campaigns'
     | '/_app/contacts'
+    | '/_app/referrals'
     | '/_app/renewals'
     | '/_app/segments'
     | '/_app/tasks'
     | '/_app/templates'
     | '/_app/campaigns_/$id'
     | '/_app/campaigns_/new'
+    | '/_app/contacts_/duplicates'
     | '/_app/contacts_/import'
+    | '/_app/contacts_/tags'
     | '/_app/segments_/$id'
     | '/_app/segments_/new'
     | '/_app/campaigns_/$id/edit'
@@ -284,6 +320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContactsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/referrals': {
+      id: '/_app/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof AppReferralsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/renewals': {
       id: '/_app/renewals'
       path: '/renewals'
@@ -326,11 +369,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampaignsNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/contacts_/duplicates': {
+      id: '/_app/contacts_/duplicates'
+      path: '/contacts/duplicates'
+      fullPath: '/contacts/duplicates'
+      preLoaderRoute: typeof AppContactsDuplicatesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/contacts_/import': {
       id: '/_app/contacts_/import'
       path: '/contacts/import'
       fullPath: '/contacts/import'
       preLoaderRoute: typeof AppContactsImportRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/contacts_/tags': {
+      id: '/_app/contacts_/tags'
+      path: '/contacts/tags'
+      fullPath: '/contacts/tags'
+      preLoaderRoute: typeof AppContactsTagsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/segments_/$id': {
@@ -373,13 +430,16 @@ interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppCampaignsRoute: typeof AppCampaignsRoute
   AppContactsRoute: typeof AppContactsRoute
+  AppReferralsRoute: typeof AppReferralsRoute
   AppRenewalsRoute: typeof AppRenewalsRoute
   AppSegmentsRoute: typeof AppSegmentsRoute
   AppTasksRoute: typeof AppTasksRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
   AppCampaignsIdRoute: typeof AppCampaignsIdRouteWithChildren
   AppCampaignsNewRoute: typeof AppCampaignsNewRoute
+  AppContactsDuplicatesRoute: typeof AppContactsDuplicatesRoute
   AppContactsImportRoute: typeof AppContactsImportRoute
+  AppContactsTagsRoute: typeof AppContactsTagsRoute
   AppSegmentsIdRoute: typeof AppSegmentsIdRoute
   AppSegmentsNewRoute: typeof AppSegmentsNewRoute
 }
@@ -388,13 +448,16 @@ const AppRouteChildren: AppRouteChildren = {
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppCampaignsRoute: AppCampaignsRoute,
   AppContactsRoute: AppContactsRoute,
+  AppReferralsRoute: AppReferralsRoute,
   AppRenewalsRoute: AppRenewalsRoute,
   AppSegmentsRoute: AppSegmentsRoute,
   AppTasksRoute: AppTasksRoute,
   AppTemplatesRoute: AppTemplatesRoute,
   AppCampaignsIdRoute: AppCampaignsIdRouteWithChildren,
   AppCampaignsNewRoute: AppCampaignsNewRoute,
+  AppContactsDuplicatesRoute: AppContactsDuplicatesRoute,
   AppContactsImportRoute: AppContactsImportRoute,
+  AppContactsTagsRoute: AppContactsTagsRoute,
   AppSegmentsIdRoute: AppSegmentsIdRoute,
   AppSegmentsNewRoute: AppSegmentsNewRoute,
 }
