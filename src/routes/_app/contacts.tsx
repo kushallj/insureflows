@@ -1,15 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { queryOptions, useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   listContacts,
+  getContact,
   getDistinctTags,
   createContact,
   updateContact,
   deleteContact,
 } from "@/lib/contacts.functions";
+import {
+  bulkUpdateTags,
+  exportAllContacts,
+  listReferralsForContact,
+  setReferredBy,
+} from "@/lib/network.functions";
+import { downloadText, toCsv } from "@/lib/contact-import";
+import { ReferralAskDialog } from "@/components/referral-ask-dialog";
+import { AskTable, fmtDate } from "@/components/referral-asks-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type {
   Contact,
   ContactInput,
@@ -17,7 +40,12 @@ import type {
   PreferredChannel,
   SortKey,
 } from "@/lib/contact-fields";
-import { PIPELINE_STAGES, PREFERRED_CHANNELS, STAGE_LABEL } from "@/lib/contact-fields";
+import {
+  IMPORTABLE_FIELDS,
+  PIPELINE_STAGES,
+  PREFERRED_CHANNELS,
+  STAGE_LABEL,
+} from "@/lib/contact-fields";
 import { StageBadge } from "@/components/stage-badge";
 import { LeadScoreBadge } from "@/components/lead-score";
 import { AiPanel } from "@/components/ai-panel";
@@ -61,11 +89,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
@@ -87,6 +111,12 @@ import {
   Upload,
   X,
   ArrowUpDown,
+  MoreHorizontal,
+  Download,
+  Copy,
+  Tags,
+  Handshake,
+  Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -105,6 +135,7 @@ function ContactsPage() {
   const [sort, setSort] = useState<SortKey>("lead_score_desc");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
 
   const listFn = useServerFn(listContacts);
   const tagsFn = useServerFn(getDistinctTags);
@@ -124,6 +155,29 @@ function ContactsPage() {
     () => contacts.find((c) => c.id === selectedId) ?? null,
     [contacts, selectedId],
   );
+  // Only contacts still in the current list count as picked (a filter change or delete drops the rest).
+  const pickedRows = contacts.filter((c) => picked.has(c.id));
+  const allPicked = contacts.length > 0 && pickedRows.length === contacts.length;
+  const togglePick = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const exportFn = useServerFn(exportAllContacts);
+  const exportAll = useMutation({
+    mutationFn: () => exportFn(),
+    onSuccess: (rows) => {
+      downloadText(
+        `insureflow-contacts-${new Date().toISOString().slice(0, 10)}.csv`,
+        contactsCsv(rows),
+      );
+      toast.success(`Exported ${rows.length} contact${rows.length === 1 ? "" : "s"}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -137,9 +191,38 @@ function ContactsPage() {
         <div className="flex items-center gap-2">
           <Link to="/contacts/import">
             <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 mr-1.5" /> Import CSV
+              <Upload className="h-4 w-4 mr-1.5" /> Import
             </Button>
           </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" aria-label="More contact tools">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to="/contacts/duplicates">
+                  <Copy className="h-4 w-4 mr-2" /> Find duplicates
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/contacts/tags">
+                  <Tags className="h-4 w-4 mr-2" /> Manage tags
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/referrals">
+                  <Handshake className="h-4 w-4 mr-2" /> Referrals
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={exportAll.isPending} onSelect={() => exportAll.mutate()}>
+                <Download className="h-4 w-4 mr-2" />{" "}
+                {exportAll.isPending ? "Exporting…" : "Export all (CSV)"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4 mr-1.5" /> Add contact
           </Button>
@@ -161,6 +244,14 @@ function ContactsPage() {
         <SortMenu value={sort} onChange={setSort} />
       </div>
 
+      {pickedRows.length > 0 && (
+        <BulkBar
+          rows={pickedRows}
+          available={tagsQuery.data ?? []}
+          onClear={() => setPicked(new Set())}
+        />
+      )}
+
       <div className="flex-1 overflow-auto">
         {contacts.length === 0 ? (
           <EmptyState onAdd={() => setAddOpen(true)} />
@@ -168,6 +259,15 @@ function ContactsPage() {
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    aria-label="Select all contacts"
+                    checked={allPicked ? true : pickedRows.length ? "indeterminate" : false}
+                    onCheckedChange={(v) =>
+                      setPicked(v ? new Set(contacts.map((c) => c.id)) : new Set())
+                    }
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Email</TableHead>
@@ -180,11 +280,14 @@ function ContactsPage() {
             </TableHeader>
             <TableBody>
               {contacts.map((c) => (
-                <TableRow
-                  key={c.id}
-                  onClick={() => setSelectedId(c.id)}
-                  className="cursor-pointer"
-                >
+                <TableRow key={c.id} onClick={() => setSelectedId(c.id)} className="cursor-pointer">
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      aria-label={`Select ${c.name}`}
+                      checked={picked.has(c.id)}
+                      onCheckedChange={() => togglePick(c.id)}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-muted-foreground">{c.phone ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{c.email ?? "—"}</TableCell>
@@ -192,7 +295,9 @@ function ContactsPage() {
                   <TableCell>
                     <StageBadge stage={c.pipeline_stage} />
                   </TableCell>
-                  <TableCell className="text-right"><LeadScoreBadge score={c.lead_score} /></TableCell>
+                  <TableCell className="text-right">
+                    <LeadScoreBadge score={c.lead_score} />
+                  </TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {formatDate(c.next_followup_at)}
                   </TableCell>
@@ -206,10 +311,7 @@ function ContactsPage() {
         )}
       </div>
 
-      <ContactDrawer
-        contact={selected}
-        onClose={() => setSelectedId(null)}
-      />
+      <ContactDrawer contact={selected} onClose={() => setSelectedId(null)} />
       <AddContactDialog open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
@@ -268,20 +370,12 @@ function StageFilter({
               key={s}
               className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm"
             >
-              <Checkbox
-                checked={value.includes(s)}
-                onCheckedChange={() => toggle(s)}
-              />
+              <Checkbox checked={value.includes(s)} onCheckedChange={() => toggle(s)} />
               <StageBadge stage={s} />
             </label>
           ))}
           {value.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full mt-1"
-              onClick={() => onChange([])}
-            >
+            <Button variant="ghost" size="sm" className="w-full mt-1" onClick={() => onChange([])}>
               Clear
             </Button>
           )}
@@ -331,12 +425,7 @@ function TagFilter({
             ))
           )}
           {value.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full mt-1"
-              onClick={() => onChange([])}
-            >
+            <Button variant="ghost" size="sm" className="w-full mt-1" onClick={() => onChange([])}>
               Clear
             </Button>
           )}
@@ -346,13 +435,7 @@ function TagFilter({
   );
 }
 
-function SortMenu({
-  value,
-  onChange,
-}: {
-  value: SortKey;
-  onChange: (v: SortKey) => void;
-}) {
+function SortMenu({ value, onChange }: { value: SortKey; onChange: (v: SortKey) => void }) {
   const labels: Record<SortKey, string> = {
     lead_score_desc: "Highest score",
     lead_score_asc: "Lowest score",
@@ -419,20 +502,13 @@ function toDateTimeInput(v: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function ContactDrawer({
-  contact,
-  onClose,
-}: {
-  contact: Contact | null;
-  onClose: () => void;
-}) {
+function ContactDrawer({ contact, onClose }: { contact: Contact | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const updateFn = useServerFn(updateContact);
   const deleteFn = useServerFn(deleteContact);
 
   const update = useMutation({
-    mutationFn: (patch: Partial<ContactInput>) =>
-      updateFn({ data: { id: contact!.id, patch } }),
+    mutationFn: (patch: Partial<ContactInput>) => updateFn({ data: { id: contact!.id, patch } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
@@ -469,6 +545,7 @@ function ContactDrawer({
                 <TabsTrigger value="policies">Policies</TabsTrigger>
                 <TabsTrigger value="tasks">Tasks</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
+                <TabsTrigger value="referrals">Referrals</TabsTrigger>
               </TabsList>
               <TabsContent value="details" className="pt-4 space-y-6">
                 <AiPanel
@@ -477,117 +554,110 @@ function ContactDrawer({
                   aiSummary={contact.ai_summary}
                 />
                 <Section title="Identity">
-                <InlineText label="Name" value={contact.name} onSave={(v) => save({ name: v ?? "" })} />
-                <InlineText
-                  label="Gender"
-                  value={contact.gender}
-                  onSave={(v) => save({ gender: v })}
-                />
-                <InlineNumber
-                  label="Age"
-                  value={contact.age}
-                  onSave={(v) => save({ age: v })}
-                />
-                <InlineDate
-                  label="Date of birth"
-                  value={contact.date_of_birth}
-                  onSave={(v) => save({ date_of_birth: v })}
-                />
-                <InlineText
-                  label="Occupation"
-                  value={contact.occupation}
-                  onSave={(v) => save({ occupation: v })}
-                />
-                <InlineText
-                  label="City"
-                  value={contact.city}
-                  onSave={(v) => save({ city: v })}
-                />
-                <InlineNumber
-                  label="Annual income"
-                  value={contact.income}
-                  onSave={(v) => save({ income: v })}
-                />
-                <InlineText
-                  label="Preferred language"
-                  value={contact.preferred_language}
-                  onSave={(v) => save({ preferred_language: v })}
-                />
-              </Section>
+                  <InlineText
+                    label="Name"
+                    value={contact.name}
+                    onSave={(v) => save({ name: v ?? "" })}
+                  />
+                  <InlineText
+                    label="Gender"
+                    value={contact.gender}
+                    onSave={(v) => save({ gender: v })}
+                  />
+                  <InlineNumber label="Age" value={contact.age} onSave={(v) => save({ age: v })} />
+                  <InlineDate
+                    label="Date of birth"
+                    value={contact.date_of_birth}
+                    onSave={(v) => save({ date_of_birth: v })}
+                  />
+                  <InlineText
+                    label="Occupation"
+                    value={contact.occupation}
+                    onSave={(v) => save({ occupation: v })}
+                  />
+                  <InlineText label="City" value={contact.city} onSave={(v) => save({ city: v })} />
+                  <InlineNumber
+                    label="Annual income"
+                    value={contact.income}
+                    onSave={(v) => save({ income: v })}
+                  />
+                  <InlineText
+                    label="Preferred language"
+                    value={contact.preferred_language}
+                    onSave={(v) => save({ preferred_language: v })}
+                  />
+                </Section>
 
-              <Section title="Contact & channels">
-                <InlineText
-                  label="Phone"
-                  value={contact.phone}
-                  onSave={(v) => save({ phone: v })}
-                />
-                <InlineText
-                  label="Email"
-                  value={contact.email}
-                  onSave={(v) => save({ email: v })}
-                />
-                <ToggleRow
-                  label="WhatsApp opt-in"
-                  value={contact.whatsapp_opt_in}
-                  onSave={(v) => save({ whatsapp_opt_in: v })}
-                />
-                <ToggleRow
-                  label="SMS opt-in"
-                  value={contact.sms_opt_in}
-                  onSave={(v) => save({ sms_opt_in: v })}
-                />
-                <ToggleRow
-                  label="Email opt-in"
-                  value={contact.email_opt_in}
-                  onSave={(v) => save({ email_opt_in: v })}
-                />
-                <InlineSelect
-                  label="Preferred channel"
-                  value={contact.preferred_channel}
-                  options={PREFERRED_CHANNELS.map((c) => ({ value: c, label: c }))}
-                  onSave={(v) => save({ preferred_channel: v as PreferredChannel })}
-                />
-              </Section>
+                <Section title="Contact & channels">
+                  <InlineText
+                    label="Phone"
+                    value={contact.phone}
+                    onSave={(v) => save({ phone: v })}
+                  />
+                  <InlineText
+                    label="Email"
+                    value={contact.email}
+                    onSave={(v) => save({ email: v })}
+                  />
+                  <ToggleRow
+                    label="WhatsApp opt-in"
+                    value={contact.whatsapp_opt_in}
+                    onSave={(v) => save({ whatsapp_opt_in: v })}
+                  />
+                  <ToggleRow
+                    label="SMS opt-in"
+                    value={contact.sms_opt_in}
+                    onSave={(v) => save({ sms_opt_in: v })}
+                  />
+                  <ToggleRow
+                    label="Email opt-in"
+                    value={contact.email_opt_in}
+                    onSave={(v) => save({ email_opt_in: v })}
+                  />
+                  <InlineSelect
+                    label="Preferred channel"
+                    value={contact.preferred_channel}
+                    options={PREFERRED_CHANNELS.map((c) => ({ value: c, label: c }))}
+                    onSave={(v) => save({ preferred_channel: v as PreferredChannel })}
+                  />
+                </Section>
 
-              <Section title="Lead">
-                <InlineText
-                  label="Lead source"
-                  value={contact.lead_source}
-                  onSave={(v) => save({ lead_source: v })}
-                />
-                <TagsField
-                  value={contact.tags}
-                  onSave={(v) => save({ tags: v })}
-                />
-                <InlineNumber
-                  label="Lead score"
-                  value={contact.lead_score}
-                  onSave={(v) => save({ lead_score: v ?? 0 })}
-                />
-                <InlineSelect
-                  label="Pipeline stage"
-                  value={contact.pipeline_stage}
-                  options={PIPELINE_STAGES.map((s) => ({ value: s, label: STAGE_LABEL[s] }))}
-                  onSave={(v) => save({ pipeline_stage: v as PipelineStage })}
-                />
-              </Section>
+                <Section title="Lead">
+                  <InlineText
+                    label="Lead source"
+                    value={contact.lead_source}
+                    onSave={(v) => save({ lead_source: v })}
+                  />
+                  <TagsField value={contact.tags} onSave={(v) => save({ tags: v })} />
+                  <InlineNumber
+                    label="Lead score"
+                    value={contact.lead_score}
+                    onSave={(v) => save({ lead_score: v ?? 0 })}
+                  />
+                  <InlineSelect
+                    label="Pipeline stage"
+                    value={contact.pipeline_stage}
+                    options={PIPELINE_STAGES.map((s) => ({ value: s, label: STAGE_LABEL[s] }))}
+                    onSave={(v) => save({ pipeline_stage: v as PipelineStage })}
+                  />
+                </Section>
 
-              <Section title="Follow-up">
-                <InlineDateTime
-                  label="Last contact"
-                  value={contact.last_contact_at}
-                  onSave={(v) => save({ last_contact_at: v })}
-                />
-                <InlineDateTime
-                  label="Next follow-up"
-                  value={contact.next_followup_at}
-                  onSave={(v) => save({ next_followup_at: v })}
-                />
-              </Section>
+                <Section title="Follow-up">
+                  <InlineDateTime
+                    label="Last contact"
+                    value={contact.last_contact_at}
+                    onSave={(v) => save({ last_contact_at: v })}
+                  />
+                  <InlineDateTime
+                    label="Next follow-up"
+                    value={contact.next_followup_at}
+                    onSave={(v) => save({ next_followup_at: v })}
+                  />
+                </Section>
 
-              <Section title="Notes">
-                <NotesField value={contact.notes} onSave={(v) => save({ notes: v })} />
-              </Section>
+                <Section title="Notes">
+                  <NotesField value={contact.notes} onSave={(v) => save({ notes: v })} />
+                </Section>
               </TabsContent>
               <TabsContent value="policies" className="pt-4">
                 <PoliciesTab contactId={contact.id} />
@@ -597,6 +667,9 @@ function ContactDrawer({
               </TabsContent>
               <TabsContent value="activity" className="pt-4">
                 <ActivityTimeline contactId={contact.id} />
+              </TabsContent>
+              <TabsContent value="referrals" className="pt-4">
+                <ReferralsTab contact={contact} />
               </TabsContent>
             </Tabs>
 
@@ -798,13 +871,7 @@ function ToggleRow({
   );
 }
 
-function TagsField({
-  value,
-  onSave,
-}: {
-  value: string[];
-  onSave: (v: string[]) => void;
-}) {
+function TagsField({ value, onSave }: { value: string[]; onSave: (v: string[]) => void }) {
   const [input, setInput] = useState("");
   function commit(next: string) {
     const t = next.trim();
@@ -961,9 +1028,7 @@ function AddContactDialog({
           <FormField label="Stage">
             <Select
               value={form.pipeline_stage}
-              onValueChange={(v) =>
-                setForm({ ...form, pipeline_stage: v as PipelineStage })
-              }
+              onValueChange={(v) => setForm({ ...form, pipeline_stage: v as PipelineStage })}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -980,9 +1045,7 @@ function AddContactDialog({
           <FormField label="Preferred channel">
             <Select
               value={form.preferred_channel}
-              onValueChange={(v) =>
-                setForm({ ...form, preferred_channel: v as PreferredChannel })
-              }
+              onValueChange={(v) => setForm({ ...form, preferred_channel: v as PreferredChannel })}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -1030,6 +1093,248 @@ function FormField({
     <div className={cn("space-y-1.5", span === 2 && "col-span-2")}>
       <Label className="text-xs">{label}</Label>
       {children}
+    </div>
+  );
+}
+
+// ── Network: export, bulk tags, referrals ──────────────────────────────────────────────────────────────────
+
+const EXPORT_COLUMNS = IMPORTABLE_FIELDS.map((f) => ({ key: f.key as string, label: f.label }));
+
+/** Same columns as the importer, so an export can be imported again as is. */
+function contactsCsv(rows: Contact[]) {
+  return toCsv(rows as unknown as Record<string, unknown>[], EXPORT_COLUMNS);
+}
+
+function BulkBar({
+  rows,
+  available,
+  onClear,
+}: {
+  rows: Contact[];
+  available: string[];
+  onClear: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const tagFn = useServerFn(bulkUpdateTags);
+  const [tag, setTag] = useState("");
+  const ids = rows.map((r) => r.id);
+  const present = Array.from(new Set(rows.flatMap((r) => r.tags))).sort();
+  const run = useMutation({
+    mutationFn: (v: { add?: string[]; remove?: string[] }) => tagFn({ data: { ids, ...v } }),
+    onSuccess: (r) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      setTag("");
+      toast.success(`Updated ${r.changed} contact${r.changed === 1 ? "" : "s"}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <div className="px-6 py-2 border-b bg-primary/5 flex flex-wrap items-center gap-2 text-sm">
+      <span className="font-medium">{rows.length} selected</span>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8">
+            <Tag className="h-4 w-4 mr-1.5" /> Add tag
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-2 space-y-2" align="start">
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (tag.trim()) run.mutate({ add: [tag.trim()] });
+            }}
+          >
+            <Input
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              placeholder="New or existing tag"
+              className="h-8"
+              maxLength={40}
+            />
+            <Button size="sm" type="submit" className="h-8" disabled={!tag.trim() || run.isPending}>
+              Add
+            </Button>
+          </form>
+          {available.length > 0 && (
+            <div className="flex flex-wrap gap-1 max-h-40 overflow-auto">
+              {available.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className="rounded-full border px-2 py-0.5 text-xs hover:bg-muted"
+                  onClick={() => run.mutate({ add: [t] })}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8" disabled={!present.length}>
+            <X className="h-4 w-4 mr-1.5" /> Remove tag
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-2" align="start">
+          <div className="flex flex-wrap gap-1 max-h-40 overflow-auto">
+            {present.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className="rounded-full border px-2 py-0.5 text-xs hover:bg-destructive/10"
+                onClick={() => run.mutate({ remove: [t] })}
+              >
+                {t} ×
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8"
+        onClick={() =>
+          downloadText(
+            `insureflow-contacts-selected-${new Date().toISOString().slice(0, 10)}.csv`,
+            contactsCsv(rows),
+          )
+        }
+      >
+        <Download className="h-4 w-4 mr-1.5" /> Export
+      </Button>
+      <Button variant="ghost" size="sm" className="h-8" onClick={onClear}>
+        Clear
+      </Button>
+    </div>
+  );
+}
+
+function ReferralsTab({ contact }: { contact: Contact }) {
+  const queryClient = useQueryClient();
+  const refFn = useServerFn(listReferralsForContact);
+  const setByFn = useServerFn(setReferredBy);
+  const listFn = useServerFn(listContacts);
+  const getFn = useServerFn(getContact);
+  const [asking, setAsking] = useState(false);
+  const [query, setQuery] = useState("");
+  const { data } = useQuery({
+    queryKey: ["referrals", "contact", contact.id],
+    queryFn: () => refFn({ data: { contact_id: contact.id } }),
+  });
+  const { data: matches } = useQuery({
+    queryKey: ["contacts", "referrer-search", query],
+    queryFn: () => listFn({ data: { search: query, sort: "created_desc" } }),
+    enabled: query.trim().length >= 2,
+  });
+  const referrerId = contact.referred_by_contact_id ?? null;
+  const referrerQuery = useQuery({
+    queryKey: ["contacts", "one", referrerId],
+    queryFn: () => getFn({ data: { id: referrerId! } }),
+    enabled: !!referrerId,
+  });
+  const setBy = useMutation({
+    mutationFn: (by: string | null) => setByFn({ data: { id: contact.id, referred_by: by } }),
+    onSuccess: () => {
+      setQuery("");
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["referrals"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="space-y-6">
+      <Section title="Ask for referrals">
+        <p className="text-sm text-muted-foreground">
+          Happy clients are your best source of new ones. Draft a message, send it from your own
+          WhatsApp, SMS or email, and InsureFlow reminds you to follow up after a week.
+        </p>
+        <Button size="sm" onClick={() => setAsking(true)}>
+          <Handshake className="h-4 w-4 mr-1.5" /> Ask {contact.name.split(" ")[0]} for a referral
+        </Button>
+        {data && data.asks.length > 0 && (
+          <div className="rounded-md border">
+            <AskTable asks={data.asks} />
+          </div>
+        )}
+      </Section>
+
+      <Section title="People they referred">
+        {!data || data.referred.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No one linked yet. Set “Referred by” on the new contact.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data.referred.map((r) => (
+              <li key={r.id} className="flex items-center justify-between text-sm">
+                <span>{r.name}</span>
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {fmtDate(r.created_at)} <StageBadge stage={r.pipeline_stage} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      <Section title="Referred by">
+        {referrerId ? (
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">{referrerQuery.data?.name ?? "…"}</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setBy.mutate(null)}
+              disabled={setBy.isPending}
+            >
+              Remove
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Input
+              placeholder="Search the client who introduced them"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-9"
+            />
+            {query.trim().length >= 2 && (
+              <div className="rounded-md border divide-y max-h-48 overflow-auto">
+                {(matches ?? [])
+                  .filter((m) => m.id !== contact.id)
+                  .slice(0, 8)
+                  .map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                      onClick={() => setBy.mutate(m.id)}
+                    >
+                      {m.name}{" "}
+                      <span className="text-xs text-muted-foreground">
+                        {m.phone ?? m.email ?? ""}
+                      </span>
+                    </button>
+                  ))}
+                {matches && matches.filter((m) => m.id !== contact.id).length === 0 && (
+                  <p className="px-3 py-2 text-xs text-muted-foreground">No matching contact.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </Section>
+
+      <ReferralAskDialog
+        target={asking ? contact : null}
+        onOpenChange={(o) => !o && setAsking(false)}
+      />
     </div>
   );
 }

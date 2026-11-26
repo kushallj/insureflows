@@ -1,15 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import Papa from "papaparse";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { bulkCreateContacts, getDuplicateKeys } from "@/lib/contacts.functions";
 import type { ContactInput, PipelineStage, PreferredChannel } from "@/lib/contact-fields";
-import {
-  IMPORTABLE_FIELDS,
-  PIPELINE_STAGES,
-  PREFERRED_CHANNELS,
-} from "@/lib/contact-fields";
+import { IMPORTABLE_FIELDS, PIPELINE_STAGES, PREFERRED_CHANNELS } from "@/lib/contact-fields";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -28,6 +23,19 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Upload } from "lucide-react";
+import {
+  EXTRA_FIELDS,
+  SOURCE_LABEL,
+  type FieldKey,
+  type SourceFormat,
+  guessMapping,
+  hasNameMapping,
+  mapRow,
+  phoneKey,
+  emailKey,
+  readContactFile,
+  vcardDate,
+} from "@/lib/contact-import";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -37,60 +45,12 @@ export const Route = createFileRoute("/_app/contacts_/import")({
   component: ImportPage,
 });
 
-type FieldKey = keyof ContactInput | "__ignore";
-
 type Row = {
   values: Record<string, string>;
   status: "ready" | "dup_phone" | "dup_email" | "invalid";
   reason?: string;
   include: boolean;
 };
-
-function normalize(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-const HEADER_ALIASES: Record<string, keyof ContactInput> = {
-  name: "name",
-  fullname: "name",
-  contactname: "name",
-  phone: "phone",
-  phonenumber: "phone",
-  mobile: "phone",
-  email: "email",
-  emailaddress: "email",
-  gender: "gender",
-  age: "age",
-  dob: "date_of_birth",
-  dateofbirth: "date_of_birth",
-  birthday: "date_of_birth",
-  occupation: "occupation",
-  job: "occupation",
-  city: "city",
-  income: "income",
-  language: "preferred_language",
-  preferredlanguage: "preferred_language",
-  leadsource: "lead_source",
-  source: "lead_source",
-  tags: "tags",
-  whatsapp: "whatsapp_opt_in",
-  whatsappoptin: "whatsapp_opt_in",
-  sms: "sms_opt_in",
-  smsoptin: "sms_opt_in",
-  emailoptin: "email_opt_in",
-  preferredchannel: "preferred_channel",
-  channel: "preferred_channel",
-  leadscore: "lead_score",
-  score: "lead_score",
-  stage: "pipeline_stage",
-  pipeline: "pipeline_stage",
-  pipelinestage: "pipeline_stage",
-  notes: "notes",
-};
-
-function guessField(header: string): FieldKey {
-  return HEADER_ALIASES[normalize(header)] ?? "__ignore";
-}
 
 function parseBool(v: string): boolean {
   const s = v.trim().toLowerCase();
@@ -104,6 +64,8 @@ function ImportPage() {
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<Record<string, FieldKey>>({});
   const [processed, setProcessed] = useState<Row[]>([]);
+  const [format, setFormat] = useState<SourceFormat>("csv");
+  const [fileName, setFileName] = useState("");
 
   const dupFn = useServerFn(getDuplicateKeys);
   const dupsQuery = useQuery({ queryKey: ["contacts", "duplicates"], queryFn: () => dupFn() });
@@ -118,23 +80,21 @@ function ImportPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (res) => {
-        const parsedHeaders = res.meta.fields ?? [];
-        setHeaders(parsedHeaders);
-        setRows(res.data);
-        const initial: Record<string, FieldKey> = {};
-        for (const h of parsedHeaders) initial[h] = guessField(h);
-        setMapping(initial);
-        setStep("map");
-      },
-      error: (err) => toast.error(err.message),
-    });
+    try {
+      const parsed = await readContactFile(file);
+      setHeaders(parsed.headers);
+      setRows(parsed.rows);
+      setFormat(parsed.format);
+      setFileName(file.name);
+      setMapping(guessMapping(parsed.headers));
+      setStep("map");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "This file couldn't be read");
+    }
   }
 
   function processRows(): Row[] {
@@ -144,16 +104,13 @@ function ImportPage() {
     const seenEmails = new Set<string>();
 
     return rows.map((raw) => {
-      const mapped: Record<string, string> = {};
-      for (const [h, v] of Object.entries(raw)) {
-        const field = mapping[h];
-        if (!field || field === "__ignore") continue;
-        mapped[field] = v ?? "";
-      }
+      const mapped = mapRow(raw, mapping);
+      // A file from a phone, Google, Outlook or LinkedIn says where these people came from unless a column already does.
+      if (!mapped.lead_source && format !== "csv") mapped.lead_source = SOURCE_LABEL[format];
       const status: Row["status"] = (() => {
         if (!mapped.name || !mapped.name.trim()) return "invalid";
-        const p = (mapped.phone ?? "").trim().toLowerCase();
-        const e = (mapped.email ?? "").trim().toLowerCase();
+        const p = phoneKey(mapped.phone);
+        const e = emailKey(mapped.email);
         if (p) {
           if (phones.has(p) || seenPhones.has(p)) return "dup_phone";
           seenPhones.add(p);
@@ -189,7 +146,9 @@ function ImportPage() {
         if (v.email) input.email = v.email;
         if (v.gender) input.gender = v.gender;
         if (v.age) input.age = Number(v.age) || null;
-        if (v.date_of_birth) input.date_of_birth = v.date_of_birth;
+        // Only a full date is saved: "--05-17" (no year) or free text would make the whole batch fail to insert.
+        if (v.date_of_birth && vcardDate(v.date_of_birth))
+          input.date_of_birth = vcardDate(v.date_of_birth);
         if (v.occupation) input.occupation = v.occupation;
         if (v.city) input.city = v.city;
         if (v.income) input.income = Number(v.income) || null;
@@ -203,7 +162,10 @@ function ImportPage() {
         if (v.whatsapp_opt_in) input.whatsapp_opt_in = parseBool(v.whatsapp_opt_in);
         if (v.sms_opt_in) input.sms_opt_in = parseBool(v.sms_opt_in);
         if (v.email_opt_in) input.email_opt_in = parseBool(v.email_opt_in);
-        if (v.preferred_channel && PREFERRED_CHANNELS.includes(v.preferred_channel as PreferredChannel))
+        if (
+          v.preferred_channel &&
+          PREFERRED_CHANNELS.includes(v.preferred_channel as PreferredChannel)
+        )
           input.preferred_channel = v.preferred_channel as PreferredChannel;
         if (v.lead_score) input.lead_score = Number(v.lead_score) || 0;
         if (v.pipeline_stage && PIPELINE_STAGES.includes(v.pipeline_stage as PipelineStage))
@@ -243,12 +205,18 @@ function ImportPage() {
         {step === "upload" && (
           <div className="max-w-md mx-auto mt-16 text-center border-2 border-dashed rounded-lg p-10 bg-card">
             <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-            <h3 className="font-semibold">Upload a CSV file</h3>
+            <h3 className="font-semibold">Upload a contacts file</h3>
             <p className="text-sm text-muted-foreground mt-1 mb-4">
-              First row should contain column headers.
+              A CSV, or contacts exported from your phone (.vcf), Google Contacts, Outlook or
+              LinkedIn. Columns from those exports are matched automatically.
             </p>
             <label className="inline-block">
-              <input type="file" accept=".csv" className="hidden" onChange={onFile} />
+              <input
+                type="file"
+                accept=".csv,.vcf,.txt,text/csv,text/vcard"
+                className="hidden"
+                onChange={onFile}
+              />
               <span className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium cursor-pointer hover:bg-primary/90">
                 Choose file
               </span>
@@ -263,7 +231,8 @@ function ImportPage() {
                 <div>
                   <h3 className="font-semibold text-sm">Map columns to fields</h3>
                   <p className="text-xs text-muted-foreground">
-                    {rows.length} rows detected. Auto-guessed mappings shown below.
+                    {rows.length} rows in {fileName} ({SOURCE_LABEL[format]}). Auto-guessed mappings
+                    shown below.
                   </p>
                 </div>
               </div>
@@ -276,7 +245,12 @@ function ImportPage() {
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate">{h}</div>
                       <div className="text-[11px] text-muted-foreground truncate">
-                        e.g. {rows.slice(0, 2).map((r) => r[h]).filter(Boolean).join(" · ") || "—"}
+                        e.g.{" "}
+                        {rows
+                          .slice(0, 2)
+                          .map((r) => r[h])
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
                       </div>
                     </div>
                     <div className="text-muted-foreground text-xs">→</div>
@@ -294,6 +268,11 @@ function ImportPage() {
                             {f.label}
                           </SelectItem>
                         ))}
+                        {EXTRA_FIELDS.map((f) => (
+                          <SelectItem key={f.key} value={f.key}>
+                            {f.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -304,16 +283,13 @@ function ImportPage() {
               <Button variant="outline" onClick={() => setStep("upload")}>
                 Back
               </Button>
-              <Button
-                onClick={toReview}
-                disabled={!Object.values(mapping).includes("name")}
-              >
+              <Button onClick={toReview} disabled={!hasNameMapping(mapping)}>
                 Continue
               </Button>
             </div>
-            {!Object.values(mapping).includes("name") && (
+            {!hasNameMapping(mapping) && (
               <p className="text-xs text-destructive text-right">
-                At least one column must map to Name.
+                At least one column must map to Name (or First/Last name).
               </p>
             )}
           </div>
@@ -428,8 +404,14 @@ function Stat({
 function StatusBadge({ status }: { status: Row["status"] }) {
   const map: Record<Row["status"], { label: string; cls: string }> = {
     ready: { label: "Ready", cls: "bg-stage-won text-stage-won-foreground" },
-    dup_phone: { label: "Duplicate phone", cls: "bg-stage-proposal text-stage-proposal-foreground" },
-    dup_email: { label: "Duplicate email", cls: "bg-stage-proposal text-stage-proposal-foreground" },
+    dup_phone: {
+      label: "Duplicate phone",
+      cls: "bg-stage-proposal text-stage-proposal-foreground",
+    },
+    dup_email: {
+      label: "Duplicate email",
+      cls: "bg-stage-proposal text-stage-proposal-foreground",
+    },
     invalid: { label: "Invalid", cls: "bg-stage-lost text-stage-lost-foreground" },
   };
   const m = map[status];

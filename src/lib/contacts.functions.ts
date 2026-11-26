@@ -6,6 +6,7 @@ import type {
   PipelineStage,
   SortKey,
 } from "./contact-fields";
+import { emailKey, phoneKey } from "./contact-keys";
 
 type ListArgs = {
   search?: string;
@@ -159,16 +160,27 @@ export const getDistinctTags = createServerFn({ method: "GET" })
 export const getDuplicateKeys = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("contacts")
-      .select("phone,email")
-      .eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
+    // Read every contact in pages: a single select stops at the API's 1,000-row limit, which missed duplicates.
+    const data: { phone: string | null; email: string | null }[] = [];
+    for (let from = 0; from < 50_000; from += 1000) {
+      const { data: page, error } = await context.supabase
+        .from("contacts")
+        .select("phone,email")
+        .eq("user_id", context.userId)
+        .order("created_at", { ascending: true })
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      data.push(...(page ?? []));
+      if (!page || page.length < 1000) break;
+    }
     const phones = new Set<string>();
     const emails = new Set<string>();
     for (const r of data ?? []) {
-      if (r.phone) phones.add(String(r.phone).trim().toLowerCase());
-      if (r.email) emails.add(String(r.email).trim().toLowerCase());
+      // Normalised keys, so "+91 98765 43210" and "9876543210" count as the same number.
+      const p = phoneKey(r.phone as string | null);
+      const e = emailKey(r.email as string | null);
+      if (p) phones.add(p);
+      if (e) emails.add(e);
     }
     return { phones: Array.from(phones), emails: Array.from(emails) };
   });

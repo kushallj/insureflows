@@ -12,6 +12,7 @@ import {
   Megaphone,
   BarChart3,
   Menu,
+  Handshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/_app")({
 
 const NAV_ITEMS = [
   { to: "/contacts", label: "Contacts", icon: Users },
+  { to: "/referrals", label: "Referrals", icon: Handshake },
   { to: "/tasks", label: "My Tasks", icon: ListTodo },
   { to: "/renewals", label: "Renewals", icon: CalendarClock },
   { to: "/segments", label: "Segments", icon: Layers },
