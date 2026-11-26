@@ -148,6 +148,7 @@ export type Database = {
           pipeline_stage: Database["public"]["Enums"]["pipeline_stage"]
           preferred_channel: Database["public"]["Enums"]["preferred_channel"]
           preferred_language: string | null
+          referred_by_contact_id: string | null
           sms_opt_in: boolean
           tags: string[]
           updated_at: string
@@ -177,6 +178,7 @@ export type Database = {
           pipeline_stage?: Database["public"]["Enums"]["pipeline_stage"]
           preferred_channel?: Database["public"]["Enums"]["preferred_channel"]
           preferred_language?: string | null
+          referred_by_contact_id?: string | null
           sms_opt_in?: boolean
           tags?: string[]
           updated_at?: string
@@ -206,6 +208,7 @@ export type Database = {
           pipeline_stage?: Database["public"]["Enums"]["pipeline_stage"]
           preferred_channel?: Database["public"]["Enums"]["preferred_channel"]
           preferred_language?: string | null
+          referred_by_contact_id?: string | null
           sms_opt_in?: boolean
           tags?: string[]
           updated_at?: string
@@ -218,6 +221,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_referred_by_contact_id_fkey"
+            columns: ["referred_by_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -304,6 +314,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "policies_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_asks: {
+        Row: {
+          asked_at: string
+          channel: Database["public"]["Enums"]["template_channel"] | null
+          contact_id: string
+          created_at: string
+          id: string
+          note: string | null
+          reminder_dismissed_at: string | null
+          responded_at: string | null
+          status: Database["public"]["Enums"]["referral_ask_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asked_at?: string
+          channel?: Database["public"]["Enums"]["template_channel"] | null
+          contact_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          reminder_dismissed_at?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["referral_ask_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asked_at?: string
+          channel?: Database["public"]["Enums"]["template_channel"] | null
+          contact_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          reminder_dismissed_at?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["referral_ask_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_asks_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
@@ -453,6 +513,7 @@ export type Database = {
       policy_status: "active" | "lapsed" | "cancelled"
       policy_type: "life" | "health" | "motor" | "other"
       preferred_channel: "whatsapp" | "sms" | "email"
+      referral_ask_status: "asked" | "replied" | "referred" | "declined"
       task_priority: "low" | "normal" | "high"
       task_status: "open" | "done"
       template_channel: "whatsapp" | "sms" | "email"
@@ -611,6 +672,7 @@ export const Constants = {
       policy_status: ["active", "lapsed", "cancelled"],
       policy_type: ["life", "health", "motor", "other"],
       preferred_channel: ["whatsapp", "sms", "email"],
+      referral_ask_status: ["asked", "replied", "referred", "declined"],
       task_priority: ["low", "normal", "high"],
       task_status: ["open", "done"],
       template_channel: ["whatsapp", "sms", "email"],
