@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Contact, ContactInput, PipelineStage, SortKey } from "./contact-fields";
 import { emailKey, phoneKey } from "./contact-keys";
+import { clampPageSize, pageRange } from "./paging";
 
 type ListArgs = {
   search?: string;
@@ -10,42 +11,80 @@ type ListArgs = {
   sort?: SortKey;
 };
 
+// The filters and sort shared by the full list and the paged list. `id` breaks ties so pages never overlap.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyListArgs(q: any, data: ListArgs) {
+  if (data.stages && data.stages.length) q = q.in("pipeline_stage", data.stages);
+  if (data.tags && data.tags.length) q = q.overlaps("tags", data.tags);
+  if (data.search && data.search.trim()) {
+    const s = data.search.trim().replace(/[%,]/g, "");
+    const like = `%${s}%`;
+    q = q.or(`name.ilike.${like},phone.ilike.${like},email.ilike.${like},city.ilike.${like}`);
+  }
+
+  switch (data.sort ?? "lead_score_desc") {
+    case "lead_score_asc":
+      q = q.order("lead_score", { ascending: true });
+      break;
+    case "next_followup_asc":
+      q = q.order("next_followup_at", { ascending: true, nullsFirst: false });
+      break;
+    case "next_followup_desc":
+      q = q.order("next_followup_at", { ascending: false, nullsFirst: false });
+      break;
+    case "created_desc":
+      q = q.order("created_at", { ascending: false });
+      break;
+    default:
+      q = q.order("lead_score", { ascending: false });
+  }
+  return q.order("id", { ascending: true });
+}
+
+/** Up to 500 matching contacts, for pickers and searches. The Contacts page uses `listContactsPage`. */
 export const listContacts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: ListArgs) => data ?? {})
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    let q = supabase.from("contacts").select("*").eq("user_id", userId);
-
-    if (data.stages && data.stages.length) q = q.in("pipeline_stage", data.stages);
-    if (data.tags && data.tags.length) q = q.overlaps("tags", data.tags);
-    if (data.search && data.search.trim()) {
-      const s = data.search.trim().replace(/[%,]/g, "");
-      const like = `%${s}%`;
-      q = q.or(`name.ilike.${like},phone.ilike.${like},email.ilike.${like},city.ilike.${like}`);
-    }
-
-    switch (data.sort ?? "lead_score_desc") {
-      case "lead_score_asc":
-        q = q.order("lead_score", { ascending: true });
-        break;
-      case "next_followup_asc":
-        q = q.order("next_followup_at", { ascending: true, nullsFirst: false });
-        break;
-      case "next_followup_desc":
-        q = q.order("next_followup_at", { ascending: false, nullsFirst: false });
-        break;
-      case "created_desc":
-        q = q.order("created_at", { ascending: false });
-        break;
-      default:
-        q = q.order("lead_score", { ascending: false });
-    }
-    q = q.limit(500);
-
+    const q = applyListArgs(
+      supabase.from("contacts").select("*").eq("user_id", userId),
+      data,
+    ).limit(500);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return rows as Contact[];
+  });
+
+export type ContactsPage = { rows: Contact[]; total: number; page: number; pageSize: number };
+
+/** One page of contacts plus the total matching the filters. */
+export const listContactsPage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: ListArgs & { page?: number; pageSize?: number }) => data ?? {})
+  .handler(async ({ data, context }): Promise<ContactsPage> => {
+    const { supabase, userId } = context;
+    const pageSize = clampPageSize(data.pageSize);
+    const { page, from, to } = pageRange(data.page, pageSize);
+    const q = applyListArgs(
+      supabase.from("contacts").select("*", { count: "exact" }).eq("user_id", userId),
+      data,
+    ).range(from, to);
+    const { data: rows, error, count } = await q;
+    if (error?.code === "PGRST103") {
+      // A page past the end (e.g. after deletes): return no rows but the real total, so the page can step back.
+      const head = await applyListArgs(
+        supabase
+          .from("contacts")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId),
+        data,
+      );
+      if (head.error) throw new Error(head.error.message);
+      return { rows: [], total: head.count ?? 0, page, pageSize };
+    }
+    if (error) throw new Error(error.message);
+    return { rows: (rows ?? []) as Contact[], total: count ?? 0, page, pageSize };
   });
 
 export const getContact = createServerFn({ method: "POST" })

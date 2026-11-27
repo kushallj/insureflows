@@ -1,16 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  queryOptions,
-  useMutation,
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   listContacts,
+  listContactsPage,
   getContact,
   getDistinctTags,
   createContact,
@@ -24,6 +19,7 @@ import {
   setReferredBy,
 } from "@/lib/network.functions";
 import { downloadText, toCsv } from "@/lib/contact-import";
+import { CONTACTS_PAGE_SIZE, lastPage, pageLabel } from "@/lib/paging";
 import { ReferralAskDialog } from "@/components/referral-ask-dialog";
 import { useOwnerGuard } from "@/components/owner-guard";
 import { AskTable, fmtDate } from "@/components/referral-asks-table";
@@ -138,16 +134,35 @@ function ContactsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
 
-  const listFn = useServerFn(listContacts);
+  const listFn = useServerFn(listContactsPage);
   const tagsFn = useServerFn(getDistinctTags);
 
-  const args = { search, stages, tags: tagFilter, sort };
-  const listOptions = queryOptions({
+  // A new search, filter or sort starts again at page 1.
+  const filterKey = JSON.stringify({ search, stages, tagFilter, sort });
+  useEffect(() => setPage(1), [filterKey]);
+
+  const args = { search, stages, tags: tagFilter, sort, page, pageSize: CONTACTS_PAGE_SIZE };
+  const listQuery = useQuery({
     queryKey: contactsKey(args),
     queryFn: () => listFn({ data: args }),
+    // Keep showing the current page while the next one loads, instead of blanking the table.
+    placeholderData: keepPreviousData,
   });
-  const { data: contacts } = useSuspenseQuery(listOptions);
+  const contacts = useMemo(() => listQuery.data?.rows ?? [], [listQuery.data]);
+  const total = listQuery.data?.total ?? 0;
+  const pages = lastPage(total, CONTACTS_PAGE_SIZE);
+  // Deleting or merging can leave us past the last page: step back to it. Only trust a settled answer for the page
+  // asked for, never the previous page kept on screen or a cached total that is still being refreshed.
+  const settled =
+    !!listQuery.data &&
+    !listQuery.isPlaceholderData &&
+    !listQuery.isFetching &&
+    listQuery.data.page === page;
+  useEffect(() => {
+    if (settled && page > pages) setPage(pages);
+  }, [settled, page, pages]);
   const tagsQuery = useQuery({
     queryKey: ["contacts", "tags"],
     queryFn: () => tagsFn(),
@@ -187,7 +202,9 @@ function ContactsPage() {
         <div>
           <h1 className="text-base font-semibold tracking-tight">Contacts</h1>
           <p className="text-xs text-muted-foreground">
-            {contacts.length} {contacts.length === 1 ? "contact" : "contacts"}
+            {listQuery.data
+              ? `${total.toLocaleString("en-IN")} ${total === 1 ? "contact" : "contacts"}`
+              : "Loading…"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -258,7 +275,15 @@ function ContactsPage() {
       )}
 
       <div className="flex-1 overflow-auto">
-        {contacts.length === 0 ? (
+        {listQuery.error ? (
+          <p className="p-6 text-sm text-destructive">{(listQuery.error as Error).message}</p>
+        ) : !listQuery.data ? (
+          <p className="p-6 text-sm text-muted-foreground">Loading contacts…</p>
+        ) : contacts.length === 0 &&
+          total === 0 &&
+          !search &&
+          !stages.length &&
+          !tagFilter.length ? (
           <EmptyState onAdd={() => setAddOpen(true)} />
         ) : (
           <Table>
@@ -284,6 +309,16 @@ function ContactsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {contacts.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={9}
+                    className="py-10 text-center text-sm text-muted-foreground"
+                  >
+                    No contacts match these filters.
+                  </TableCell>
+                </TableRow>
+              )}
               {contacts.map((c) => (
                 <TableRow key={c.id} onClick={() => setSelectedId(c.id)} className="cursor-pointer">
                   <TableCell onClick={(e) => e.stopPropagation()}>
@@ -315,6 +350,54 @@ function ContactsPage() {
           </Table>
         )}
       </div>
+
+      {total > CONTACTS_PAGE_SIZE && (
+        <div className="border-t px-4 md:px-6 py-2 flex items-center justify-between gap-2 bg-background text-sm">
+          <span className="text-muted-foreground tabular-nums">
+            {pageLabel(page, CONTACTS_PAGE_SIZE, total)}
+            {listQuery.isFetching && " · loading…"}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(1)}
+              aria-label="First page"
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+            <span className="px-2 text-muted-foreground tabular-nums">
+              Page {page} of {pages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pages}
+              onClick={() => setPage(pages)}
+              aria-label="Last page"
+            >
+              Last
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ContactDrawer contact={selected} onClose={() => setSelectedId(null)} />
       <AddContactDialog open={addOpen} onOpenChange={setAddOpen} />
